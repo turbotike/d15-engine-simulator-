@@ -165,7 +165,11 @@ CoreOut EngineCore::tick(float dt, float rpm, float fuelCmd01, float jake01) {
                  * clampf_((rpm - 680.0f) / 450.0f, 0, 1);
     // wastegate: past the spring, exhaust bypasses the wheel
     float boostPsiNow = (_map - P_AMB) / 6894.8f;
-    if (boostPsiNow > wgPsi) pTurb *= clampf_(1.0f - (boostPsiNow - wgPsi) * 0.5f, 0.05f, 1.0f);
+    // Floor 0, not 0.05: 5% of the exhaust energy from a big-plunger, 3000 hp
+    // build was still enough to drive the turbo to 258 psi past ANY wastegate
+    // setting, so the rods let go whatever the tune (Mat: "at max boost, full
+    // parts, it throws a rod no matter how much timing I pull").
+    if (boostPsiNow > wgPsi) pTurb *= clampf_(1.0f - (boostPsiNow - wgPsi) * 0.5f, 0.0f, 1.0f);
     // compressor absorbs power to make boost
     float prC    = 1.0f + 1.82e-8f * _wTurbo * _wTurbo;              // PR from shaft speed
     float pComp  = airKgS * 1005.0f * 300.0f * (powf(prC, 0.286f) - 1.0f) / 0.72f;

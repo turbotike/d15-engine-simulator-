@@ -182,10 +182,10 @@ static void benchKeys() {
                 if (!strcmp(tok, "tim0"))      { Engine.timMap[0] = constrain((float)atof(eq + 1), -5.0f, 10.0f); continue; }
                 if (!strcmp(tok, "tim1"))      { Engine.timMap[1] = constrain((float)atof(eq + 1), -5.0f, 10.0f); continue; }
                 if (!strcmp(tok, "lopeforce")) { Engine.lopeForce = atoi(eq + 1) != 0; continue; }
-                // part-table calibration: ff=a,b,c (flow) wg= tm= tc= ic= fc= rod= melt=
+                // part-table calibration: ff=a,b,c (flow) wgmul= tm= tc= ic= fc= rod= melt=  (NOT "wg" - that is the wastegate)
                 {
                     extern float PT_FFLOW[3], PT_WGMUL[3], PT_TMULT[3], PT_TCEIL[3], PT_ICEFF[3], PT_FCAP[3], PT_RODBAR[3], PT_MELTF[3];
-                    struct { const char *k; float *t; } T[] = {{"ff",PT_FFLOW},{"wg",PT_WGMUL},{"tm",PT_TMULT},{"tc",PT_TCEIL},
+                    struct { const char *k; float *t; } T[] = {{"ff",PT_FFLOW},{"wgmul",PT_WGMUL},{"tm",PT_TMULT},{"tc",PT_TCEIL},
                                                                {"ic",PT_ICEFF},{"fc",PT_FCAP},{"rod",PT_RODBAR},{"melt",PT_MELTF}};
                     bool hit = false;
                     for (auto &e : T) if (!strcmp(tok, e.k)) { sscanf(eq + 1, "%f,%f,%f", &e.t[0], &e.t[1], &e.t[2]); Engine.applyParts(); hit = true; }
