@@ -318,7 +318,7 @@ static void hStatus() {
     // One snprintf into a static buffer instead of ~30 String appends. Each
     // String(float) allocated, and at 7 polls a second that was steady heap
     // churn on a long session. Same keys, same formats as before.
-    static char js[1900];
+    static char js[2000];
     snprintf(js, sizeof(js),
         "{\"sim\":1,\"engine\":%d,\"gear\":2,\"simgear\":%d,\"throttle\":%d,\"motor\":%d,"
         "\"lightMode\":%d,\"uptimeMs\":%lu,\"rpm\":%.0f,\"mph\":%.1f,\"psi\":%.1f,"
@@ -331,7 +331,7 @@ static void hStatus() {
         "\"tr\":%d,\"lope\":%d,\"beacon\":%d,"
         "\"hydOn\":%d,\"hydPsi\":%.0f,\"hydTemp\":%.0f,\"hydPos\":[%.0f,%.0f,%.0f,%.0f],"
         "\"rx\":[%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u],"
-        "\"dyno\":\"%s\",\"gok\":%d,\"gp\":%.1f,\"gr\":%.1f,\"gt\":%.1f,\"gov\":%d,\"gax\":%d,\"ghl\":%.2f,\"gl\":%.2f,\"gf\":%.2f,\"son\":%d,\"sr\":%.2f,\"sp\":%.2f,\"sul\":%d,\"sur\":%d,\"sct\":%d,\"scr\":%d,\"stv\":%.0f}",
+        "\"dyno\":\"%s\",\"dyon\":%d,\"dyp\":%.3f,\"dyhp\":%.0f,\"gok\":%d,\"gp\":%.1f,\"gr\":%.1f,\"gt\":%.1f,\"gov\":%d,\"gax\":%d,\"ghl\":%.2f,\"gl\":%.2f,\"gf\":%.2f,\"son\":%d,\"sr\":%.2f,\"sp\":%.2f,\"sul\":%d,\"sur\":%d,\"sct\":%d,\"scr\":%d,\"stv\":%.0f}",
         engine, (int)Engine.gear(), 1470 + (int)(Engine.load() * 500), (int)Out.escMicros(),
         lightMode, (unsigned long)millis(), Engine.rpm(), Engine.speedMph(), Engine.boostPsi(),
         Engine.airPsi(), Engine.airSecPsi(), Engine.coolantF(), Engine.oilF(), Engine.oilPsi(), Engine.pyroF(),
@@ -348,7 +348,8 @@ static void hStatus() {
         Hyd.pos(0) * 100.0f, Hyd.pos(1) * 100.0f, Hyd.pos(2) * 100.0f, Hyd.pos(3) * 100.0f,
         RC.ch(0), RC.ch(1), RC.ch(2), RC.ch(3), RC.ch(4), RC.ch(5), RC.ch(6), RC.ch(7),
         RC.ch(8), RC.ch(9), RC.ch(10), RC.ch(11), RC.ch(12), RC.ch(13), RC.ch(14), RC.ch(15),
-        g_dyno.c_str(),
+        Engine.dynoResult()[0] ? Engine.dynoResult() : g_dyno.c_str(),
+        Engine.dynoLive() ? 1 : 0, Engine.dynoProgress(), Engine.dynoHpNow(),
         Tilt.present() ? 1 : 0, Tilt.pitchDeg(), Tilt.rollDeg(), Tilt.tiltDeg(), Tilt.rolledOver() ? 1 : 0,
         (int)Tilt.axis, Tilt.hill, Tilt.accLat(), Tilt.accFwd(),
         Susp.P.on ? 1 : 0, Susp.rollNow(), Susp.pitchNow(), Susp.usL(), Susp.usR(), Susp.P.ctrL, Susp.P.ctrR, Susp.P.travel);
@@ -478,18 +479,14 @@ static void hCmd() {
     else if (a == "TRAILER_RAMPS_DOWN") Trailer.hold(TR_RAMPS_DOWN);
     else if (a == "TRAILER_STOP")       Trailer.release();
     else if (a == "DYNO") {
-        EngineSim::DynoResult r = Engine.dynoRun();
-        if (r.blown) Engine.applyDamage(35.0f);          // grenades cost real health
-        char buf[160];
-        snprintf(buf, sizeof(buf),
-                 "%.0fhp@%.0frpm;egt=%.0f;boost=%.0f;drt=%d;srg=%d;pcp=%d;bln=%d;hlth=%.0f",
-                 r.hp, r.rpm, r.egtPeak, r.boostPsi,
-                 r.derated ? 1 : 0, r.surged ? 1 : 0, r.pcpOver ? 1 : 0,
-                 r.blown ? 1 : 0, Engine.health());
-        g_dyno = buf;
-        http.send(200, "text/plain", g_dyno);
+        // starts the LIVE pull; the result arrives in /status "dyno" when it ends
+        g_dyno = "";
+        Engine.dynoClearResult();
+        http.send(200, "text/plain", Engine.dynoStart() ? "DYNO:1" : "DYNO:0");
         return;
     }
+    else if (a == "DYNO_ABORT") { Engine.dynoAbort(); }
+    else if (a == "DYNO_CURVE") { http.send(200, "application/json", Engine.dynoCurveJson()); return; }
     else if (a.startsWith("REBUILD")) {
         Engine.rebuild();
         // sloppy wrenching leaves a weaker engine - REBUILD:<pct>

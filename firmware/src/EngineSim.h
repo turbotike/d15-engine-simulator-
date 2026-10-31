@@ -68,7 +68,21 @@ public:
     // pressure with timing; overboost surges/overspeeds the S410G.  A balanced
     // tune runs ~1000 hp cool; a maxed-slider tune melts down mid-pull.
     struct DynoResult { float hp, rpm, egtPeak, boostPsi; bool derated, surged, pcpOver, blown; };
-    DynoResult dynoRun() const;                    // full pull with tuning diagnostics
+    DynoResult dynoRun() const;                    // full pull with tuning diagnostics (instant, bench)
+    // ---- THE LIVE DYNO PULL (Mat: "an actual long pull like a real truck dyno") ----
+    // Strapped down in neutral (wheels/ESC dead), full throttle: 2.5 s held at
+    // 1000 rpm to load up and build boost, then the dyno brake lets it climb to
+    // 2100 over 15 s. The real engine runs the whole time - sound, gauges, heat -
+    // and a bad tune can melt or throw a rod mid-pull. Brake aborts.
+    static const int DYNO_PTS = 23;                // 1000..2100 every 50 rpm
+    bool  dynoStart();                             // false = engine not running
+    void  dynoAbort()               { if (g_dynoOn) dynoFinish(true); }
+    bool  dynoLive()  const         { return g_dynoOn; }
+    float dynoProgress() const      { return g_dynoOn ? clampf(g_dynoT / 17.5f, 0, 1) : 0.0f; }
+    float dynoHpNow() const         { return g_dynoHpNow; }
+    const char* dynoResult() const  { return g_dynoRes; }   // "" until a pull finishes
+    void  dynoClearResult()         { g_dynoRes[0] = 0; }
+    String dynoCurveJson() const;
     void applyDamage(float d) { g_health = clampf(g_health - d, 0, 100); }
     void rebuild()            { g_health = 100; g_pistonMelt = 0; g_mechDamage = 0; }
     void setHealth(float h)   { g_health = clampf(h, 0, 100); if (h > 8) { g_pistonMelt = 0; g_mechDamage = 0; } }
@@ -718,7 +732,15 @@ static const float RAD;
     // thermal
     float g_coolantF=AMBIENT_F, g_oilF=AMBIENT_F, g_health=100; bool g_fanOn=false;
     float g_extVolts=12.5f; bool g_haveVolts=false;   // real pack volts, if fed (setRealVolts)
-    float g_pistonMelt=0, g_mechDamage=0; bool g_meltEvent=false;     // thermal / mechanical death
+    float g_pistonMelt=0, g_mechDamage=0; bool g_meltEvent=false;
+    // live dyno
+    bool  g_dynoOn=false; float g_dynoT=0, g_dynoRpm=1000, g_dynoThr=0, g_dynoHpNow=0;
+    float g_dynoHp[DYNO_PTS]={0}, g_dynoTq[DYNO_PTS]={0}; int g_dynoN=0;
+    float g_dynoPkHp=0, g_dynoPkRpm=0, g_dynoPkTq=0, g_dynoEgt=0, g_dynoBoost=0;
+    bool  g_dynoSurge=false, g_dynoPcp=false;
+    char  g_dynoRes[200]={0};
+    void  dynoTick(float dt);
+    void  dynoFinish(bool aborted);     // thermal / mechanical death
     int   g_deathCause=0;                                            // 0 = melt, 1 = over-pressure
     float g_rodBar=270.0f, g_meltF=1600.0f;                          // failure limits (set by parts)
     void  meltdown();                                                 // she lets go -> dead

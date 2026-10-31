@@ -401,9 +401,37 @@ whether it lives. **Big-plunger injectors** bring the lope and the limiter pops.
 - **RESET TUNE TO STOCK** puts both maps back.
 
 ### The dyno cell
-Runs a full transient pull on your current build and tune and reports
-horsepower and rpm, peak EGT, peak boost, and whether it ran hot, surged,
-over-pressured, or **blew up** (which costs real engine health).
+A **live pull**, like strapping the truck to a real chassis dyno. Start the
+engine, open TUNE → Dyno Cell and press **RUN DYNO PULL**:
+1. The truck stays in neutral (the wheels don't move) and goes to **full throttle**.
+2. It **holds 1000 rpm** for a couple of seconds to load up and build boost.
+3. The dyno lets it **climb to 2100 rpm over 15 seconds**. You hear it pull the
+   whole way while the horsepower, EGT and boost gauges move live.
+4. You get **peak horsepower @ rpm, peak torque, peak boost and EGT**, a verdict
+   (clean / running hot / surge / **melted** / **threw a rod**), and a **dyno sheet**
+   with the horsepower and torque curves against rpm.
+
+It's real heat and real cylinder pressure, so a greedy tune can blow it up
+mid-pull, and that costs engine health. Hit the brake or **ABORT** to stop a pull.
+
+#### The record to beat: 3881 hp
+
+<p align="center"><img src="docs/img/dyno_3881hp.jpg" alt="Dyno sheet: 3881 hp at 2100 rpm, 9948 lb-ft peak, running hot at 1776°F" width="320"></p>
+
+Full top build, hand-tuned on the live dyno: **3881 hp @ 2100 rpm, 9948 lb-ft**,
+running hot at 1776 °F, one bad pull from a melt. That's about 900 hp over the
+same parts on a stock tune. Beat it.
+
+#### About that torque
+Horsepower is torque × rpm ÷ 5252, and this engine keeps the **C15's governor
+at about 2100 rpm**. Real 3,000–4,000 hp pulling diesels make their power by
+**revving**, to 3,000–4,000+ rpm, with roughly 5,000–7,000 lb-ft. Here the revs
+are capped where the real C15 recordings live, so all the power has to come as
+**torque**, and a 3,800 hp pull reads near 10,000 lb-ft.
+
+That's a deliberate trade. It keeps the engine sounding like a real C15 the whole
+way up, and it keeps tuning about what matters: **fuel against air, heat
+against timing, boost against your rods**. That balance is what makes it fun.
 
 ### Tuning guide (no cheat codes)
 

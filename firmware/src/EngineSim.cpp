@@ -139,6 +139,63 @@ float EngineSim::engineTorqueNm() const {
     return fmaxf(g_lastCore.torqueNm, 0.0f) * (PEAK_TORQUE / 2508.0f) * g_derate;
 }
 
+// ---- THE LIVE DYNO PULL (see EngineSim.h) ----
+bool EngineSim::dynoStart() {
+    if (g_state != ES_RUN || g_dynoOn) return false;
+    g_dynoOn = true; g_dynoT = 0; g_dynoRpm = fmaxf(g_rpm, 900.0f); g_dynoThr = 0.25f; g_dynoHpNow = 0;
+    for (int i = 0; i < DYNO_PTS; i++) { g_dynoHp[i] = 0; g_dynoTq[i] = 0; }
+    g_dynoN = 0; g_dynoPkHp = g_dynoPkRpm = g_dynoPkTq = g_dynoEgt = g_dynoBoost = 0;
+    g_dynoSurge = g_dynoPcp = false; g_dynoRes[0] = 0;
+    return true;
+}
+void EngineSim::dynoTick(float dt) {
+    g_dynoT += dt;
+    const float HOLD = 2.5f, SWEEP = 15.0f;
+    if (g_dynoT < HOLD) {                                   // load up at 1000, build boost
+        g_dynoRpm += (1000.0f - g_dynoRpm) * fminf(1.0f, dt * 3.0f);
+        g_dynoThr = fminf(1.0f, 0.25f + g_dynoT / 2.0f);    // ease the rack in, as an operator would
+    } else {
+        g_dynoThr = 1.0f;
+        g_dynoRpm = 1000.0f + 1100.0f * fminf(1.0f, (g_dynoT - HOLD) / SWEEP);
+    }
+    // measure off the engine core: the same numbers the instant dyno reports
+    float tq = fmaxf(g_lastCore.torqueNm, 0.0f);
+    float hp = tq * g_dynoRpm / 9549.0f / 0.7457f;
+    g_dynoHpNow += (hp - g_dynoHpNow) * fminf(1.0f, dt * 8.0f);
+    if (g_dynoT >= HOLD) {
+        int k = (int)((g_dynoRpm - 1000.0f) / 50.0f + 0.5f);
+        if (k >= 0 && k < DYNO_PTS) { g_dynoHp[k] = g_dynoHpNow; g_dynoTq[k] = tq * 0.7376f; if (k + 1 > g_dynoN) g_dynoN = k + 1; }
+        if (g_dynoHpNow > g_dynoPkHp) { g_dynoPkHp = g_dynoHpNow; g_dynoPkRpm = g_dynoRpm; }
+        if (tq * 0.7376f > g_dynoPkTq) g_dynoPkTq = tq * 0.7376f;
+    }
+    if (g_lastCore.egtF > g_dynoEgt) g_dynoEgt = g_lastCore.egtF;
+    if (g_boostPsi > g_dynoBoost) g_dynoBoost = g_boostPsi;
+    if (g_lastCore.surge && g_dynoT > 1.0f) g_dynoSurge = true;
+    if (g_lastCore.pcpBar > g_rodBar) g_dynoPcp = true;
+    if (g_dynoT >= HOLD + SWEEP) dynoFinish(false);
+}
+void EngineSim::dynoFinish(bool aborted) {
+    g_dynoOn = false; g_dynoThr = 0;
+    bool blown = (g_state != ES_RUN) && g_health <= 8.0f;    // it died on the rollers
+    snprintf(g_dynoRes, sizeof(g_dynoRes),
+             "%.0fhp@%.0frpm;egt=%.0f;boost=%.0f;drt=%d;srg=%d;pcp=%d;bln=%d;hlth=%.0f;tq=%.0f;abt=%d",
+             g_dynoPkHp, g_dynoPkRpm, g_dynoEgt, g_dynoBoost,
+             (g_dynoEgt > 1150.0f && !blown) ? 1 : 0, g_dynoSurge ? 1 : 0,
+             (g_dynoPcp && blown) ? 1 : 0, blown ? 1 : 0, g_health, g_dynoPkTq, aborted ? 1 : 0);
+    Serial.printf("[dyno] live pull: %s\n", g_dynoRes);
+}
+String EngineSim::dynoCurveJson() const {
+    String j; j.reserve(700);
+    j = "{\"rpm\":[";
+    for (int i = 0; i < g_dynoN; i++) { if (i) j += ','; j += String(1000 + i * 50); }
+    j += "],\"hp\":[";
+    for (int i = 0; i < g_dynoN; i++) { if (i) j += ','; j += String((int)g_dynoHp[i]); }
+    j += "],\"tq\":[";
+    for (int i = 0; i < g_dynoN; i++) { if (i) j += ','; j += String((int)g_dynoTq[i]); }
+    j += "]}";
+    return j;
+}
+
 float EngineSim::timAt(float rpm) const {
     float f = clampf((rpm - 600.0f) / 1500.0f, 0, 1) * 7.0f;
     int k = (int)f; if (k > 6) k = 6; float fr = f - k;
@@ -735,6 +792,12 @@ void EngineSim::update(float dt, float throttle01, bool inDrive, bool inReverse,
     if (dt > 0.1f) dt = 0.1f; if (dt < 0) dt = 0;
     if (loadAccel < 0.1f) loadAccel = 0.1f;
     brake01 = clampf(brake01, 0, 1); jakeAmt = clampf(jakeAmt, 0, 1);
+    // LIVE DYNO: the cell owns the controls - full rack, neutral (the wheels and
+    // ESC stay dead, it is strapped down), no jake. The brake aborts the pull.
+    if (g_dynoOn) {
+        if (brake01 > 0.5f || g_state != ES_RUN) dynoFinish(brake01 > 0.5f);
+        else { dynoTick(dt); throttle01 = g_dynoThr; inDrive = false; inReverse = false; jakeAmt = 0; brake01 = 0; }
+    }
     g_throttle = throttle01; g_drive = inDrive; g_jakeAmt = jakeAmt; g_reverse = inReverse;
     // (No auto jake on descents - Mat 2026-10-31: "no auto jake". The jake is
     // the driver's switch only; downhill the box just holds its gear.)
@@ -1652,6 +1715,8 @@ g_gear = tgt; g_manReq = g_gear; shiftTo = 0; shifting = false;
     if (!isfinite(g_fuelDeliv))  g_fuelDeliv = 0.12f;
     if (!isfinite(g_chopD))      g_chopD = 0.0f;
     if (!isfinite(g_tqRef))      g_tqRef = 2400.0f;
+    // the dyno brake holds the engine on its sweep, and it is working - full load
+    if (g_dynoOn && g_state == ES_RUN) { rpm = g_dynoRpm; g_load = 1.0f; }
     g_rpm = rpm;
     // rev limiter (audio chops off it)
     g_limiter = (g_state==ES_RUN && rpm >= MAX_RPM-40 && g_throttle > 0.55f);

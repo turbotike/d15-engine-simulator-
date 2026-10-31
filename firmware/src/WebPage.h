@@ -495,14 +495,19 @@ input[type=range]::-moz-range-thumb{width:30px;height:30px;border-radius:50%;bac
    <span class="ic">&#x1F4C8;</span><h2>Dyno Cell</h2>
    <span class="badge">PULL</span><span class="chev">&#x25BC;</span></div>
   <div class="section-body">
-   <div class="setting-desc">Strap it to the rollers: a 15-second full-load pull with real heat. A greedy tune derates halfway up - or melts down. Balance fuel to AIR, keep the pyro alive, and post your number.</div>
+   <div class="setting-desc">Strap it to the rollers. Engine running, in neutral - the wheels stay put. Full throttle: it holds 1000 rpm to build boost, then the dyno lets it climb to 2100 over 15 seconds. Real heat, real pressure: a greedy tune melts or throws a rod mid-pull. Brake or ABORT stops it.</div>
    <div class="pb-row3" style="align-items:center;margin-bottom:10px">
     <div class="pb-g md"><canvas data-g="dpyro"></canvas></div>
     <div class="pb-g big"><canvas data-g="dyno"></canvas></div>
     <div class="pb-g md"><canvas data-g="dboost"></canvas></div>
    </div>
-   <button class="hbtn" onclick="runDyno()">RUN DYNO PULL</button>
+   <div id="dyLive" style="display:none;text-align:center;font-weight:800;padding:4px 0 8px">
+    <div style="display:flex;justify-content:space-around;font-size:1.1rem"><span id="dyRpm">--</span><span id="dyHpNow" style="color:#ff8a1e">--</span><span id="dyPsi">--</span></div>
+    <div style="height:8px;background:#1a1a18;border:1px solid #4a463c;border-radius:4px;margin-top:6px;overflow:hidden"><div id="dyBar" style="height:100%;width:0;background:linear-gradient(90deg,#ff8a1e,#ff382b)"></div></div>
+   </div>
+   <button class="hbtn" id="dyBtn" onclick="runDyno()">RUN DYNO PULL</button>
    <div id="dynoOut" style="text-align:center;font-size:1.5rem;font-weight:800;padding:10px;color:#ff8a1e">--</div>
+   <canvas id="dySheet" height="220" style="display:none;width:100%;background:#0e0e0c;border:1px solid #3a372f;border-radius:6px"></canvas>
   </div></div>
 
  <div class="section collapsed" id="sec_rcmap" style="--acc:#ffb020"><div class="section-header" onclick="toggleSection('rcmap')"><span class="ic">&#x1F4E1;</span><h2>RC Channel Map</h2><span class="badge">9</span><span class="chev">&#x25BC;</span></div><div class="section-body"><div class="setting-desc">Which receiver channel drives each function. Lights, horn, jake and aux used to be fixed to channels 7-10, which a 6-channel radio can't reach.</div><div id="rcmapRows"></div></div></div>
@@ -1122,35 +1127,82 @@ function ensureTuneReset(){
   body.querySelectorAll('.divider').forEach(function(dv){if(dv.textContent==='Drag Race')body.appendChild(dv);});
   ['clutchRelease','raceEscTop'].forEach(function(k){var s=document.getElementById('sl_'+k);if(s){var st=s.closest('.setting');if(st)body.appendChild(st);}});}}
 var dynoAnim=null;
-function runDyno(){var o=document.getElementById('dynoOut');o.innerHTML='PULLING...';
+// LIVE DYNO PULL: the board runs the real engine on its rollers (EngineSim
+// dynoStart); this page shows it live and draws the sheet at the end.
+var dynoAnim=null,_dyPoll=null;
+function runDyno(){
+ var o=document.getElementById('dynoOut'),btn=document.getElementById('dyBtn');
+ if(_dyPoll){q('/cmd?action=DYNO_ABORT').catch(function(){});return;}           // the button is ABORT while pulling
  var g=window.pbG?window.pbG('dyno'):null,ge=window.pbG?window.pbG('dpyro'):null,gb=window.pbG?window.pbG('dboost'):null;
  [g,ge,gb].forEach(function(x){if(x&&!x.px)x.layout();});
- q('/cmd?action=DYNO').catch(function(){});
- var t0=Date.now(),result=null,rEgt=0,rBoost=0,verdict='',n=0;
- var poll=setInterval(function(){q('/status').then(function(r){return r.json();}).then(function(d){
-   if(d.dyno&&d.dyno.length){
-    var parts=d.dyno.split(';'),kv={};
-    parts.slice(1).forEach(function(p){var e=p.split('=');kv[e[0]]=parseFloat(e[1]);});
-    result=parseFloat(parts[0])||0;rEgt=kv.egt||0;rBoost=kv.boost||0;
-    var head='<b style="font-size:1.4rem">'+parts[0].replace('hp@',' hp @ ').replace('rpm',' rpm')+'</b>';
-    if(kv.drt)verdict='RUNNING HOT at '+Math.round(rEgt)+'\u00b0F \u2014 one bad pull from a melt. Add a little TIMING (advance cools EGT), or more boost / less fuel.';
-    else if(kv.srg)verdict='Compressor SURGE \u2014 boost way past the fuel. Add fuel or back the wastegate off.';
-    else verdict='CLEAN PULL \u2014 she will live at this power.';
-    if(kv.bln){
-     if(kv.pcp)verdict='<span style="color:#ff382b">THREW A ROD \u2014 cylinder pressure past the limit. Too much TIMING for that boost. Pull some timing.</span> <button class="hbtn" style="margin-top:8px" onclick="openRebuild()">REBUILD ENGINE</button>';
-     else verdict='<span style="color:#ff382b">MELTED IT DOWN \u2014 piston crown let go at '+Math.round(rEgt)+'\u00b0F. Too retarded or starved of air. Add TIMING or boost.</span> <button class="hbtn" style="margin-top:8px" onclick="openRebuild()">REBUILD ENGINE</button>';}
-    o.innerHTML=head+'<div style="font-size:.8rem;color:#8a8578;font-weight:600;padding-top:4px">'+verdict+'</div>';
-    clearInterval(poll);}
-   else if(++n>25){o.innerHTML='no truck connected';result=-1;clearInterval(poll);}}).catch(function(){});},400);
- if(dynoAnim)cancelAnimationFrame(dynoAnim);
- var v=0,ve=700,vb=0;(function fr(){var el=(Date.now()-t0)/1000;var tg,te,tb;
-  if(result===null){tg=Math.min(880,el*130)+Math.sin(el*8)*22;te=Math.min(1000,700+el*40);tb=Math.min(40,el*7);}
-  else if(result<0){tg=0;te=0;tb=0;}
-  else{tg=result;te=rEgt;tb=rBoost;}
-  v+=(tg-v)*0.07;ve+=(te-ve)*0.07;vb+=(tb-vb)*0.07;
-  if(g)g.render(Math.max(0,v));if(ge)ge.render(Math.max(0,ve));if(gb)gb.render(Math.max(0,vb));
-  var done=(result!==null)&&(Math.abs(v-(result<0?0:result))<1.5)&&el>2;
-  if(!done)dynoAnim=requestAnimationFrame(fr);})();}
+ document.getElementById('dySheet').style.display='none';
+ q('/cmd?action=DYNO').then(function(r){return r.text();}).then(function(t){
+  if(t.indexOf('DYNO:1')<0){o.innerHTML='<span style="font-size:1rem">Start the engine first - the dyno needs it running.</span>';return;}
+  o.innerHTML='LOADING UP...';btn.textContent='ABORT';btn.style.background='#40151a';
+  document.getElementById('dyLive').style.display='block';
+  var live={hp:0,egt:0,psi:0},tgt={hp:0,egt:0,psi:0},seen=0;
+  if(dynoAnim)cancelAnimationFrame(dynoAnim);
+  (function fr(){['hp','egt','psi'].forEach(function(k){live[k]+=(tgt[k]-live[k])*0.15;});
+   if(g)g.render(Math.max(0,live.hp));if(ge)ge.render(Math.max(0,live.egt));if(gb)gb.render(Math.max(0,live.psi));
+   dynoAnim=requestAnimationFrame(fr);})();
+  _dyPoll=setInterval(function(){q('/status').then(function(r){return r.json();}).then(function(d){
+   if(d.dyon){seen=1;tgt.hp=+d.dyhp||0;tgt.egt=+d.pyro||0;tgt.psi=+d.psi||0;
+    document.getElementById('dyRpm').textContent=Math.round(d.rpm)+' rpm';
+    document.getElementById('dyHpNow').textContent=Math.round(d.dyhp)+' hp';
+    document.getElementById('dyPsi').textContent=Math.round(d.psi)+' psi';
+    document.getElementById('dyBar').style.width=Math.round((+d.dyp||0)*100)+'%';
+    o.innerHTML=(d.dyp<0.143)?'LOADING UP...':'PULLING';return;}
+   if(!seen&&!(d.dyno&&d.dyno.length))return;                                  // not started yet
+   clearInterval(_dyPoll);_dyPoll=null;btn.textContent='RUN DYNO PULL';btn.style.background='';
+   document.getElementById('dyLive').style.display='none';
+   dyResult(d.dyno||'',tgt,live);
+  }).catch(function(){});},300);
+ }).catch(function(){o.innerHTML='no truck connected';});
+}
+function dyResult(res,tgt,live){
+ var o=document.getElementById('dynoOut');
+ if(!res){o.innerHTML='--';return;}
+ var parts=res.split(';'),kv={};parts.slice(1).forEach(function(p){var e=p.split('=');kv[e[0]]=parseFloat(e[1]);});
+ var hp=parseFloat(parts[0])||0;tgt.hp=hp;tgt.egt=kv.egt||0;tgt.psi=kv.boost||0;
+ setTimeout(function(){if(dynoAnim){cancelAnimationFrame(dynoAnim);dynoAnim=null;}},2500);
+ var head='<b style="font-size:1.4rem">'+parts[0].replace('hp@',' hp @ ').replace('rpm',' rpm')+'</b>'+
+  (kv.tq?'<div style="font-size:1rem;color:#7ee0ff">'+Math.round(kv.tq)+' lb-ft peak</div>':'');
+ var v;
+ if(kv.abt)v='ABORTED - partial pull.';
+ else if(kv.bln){
+  if(kv.pcp)v='<span style="color:#ff382b">THREW A ROD - cylinder pressure past what these rods hold. Too much BOOST (and timing) for them: back the wastegate off, or fit stronger rods.</span>';
+  else v='<span style="color:#ff382b">MELTED IT DOWN - piston crown let go at '+Math.round(kv.egt)+'\u00b0F. Too much fuel for the air, or the burn too late. More air, a touch more timing, or less fuel.</span>';
+  v+=' <button class="hbtn" style="margin-top:8px" onclick="openRebuild()">REBUILD ENGINE</button>';}
+ else if(kv.srg)v='Compressor SURGE - boost way past the fuel. Add fuel or back the wastegate off.';
+ else if(kv.drt)v='RUNNING HOT at '+Math.round(kv.egt)+'\u00b0F - one bad pull from a melt.';
+ else v='CLEAN PULL - she will live at this power.';
+ o.innerHTML=head+'<div style="font-size:.8rem;color:#8a8578;font-weight:600;padding-top:4px">'+v+'</div>';
+ q('/cmd?action=DYNO_CURVE').then(function(r){return r.json();}).then(dySheet).catch(function(){});
+}
+// THE DYNO SHEET: horsepower (orange) and torque (cyan) against rpm
+function dySheet(c){
+ if(!c||!c.rpm||c.rpm.length<3)return;
+ var cv=document.getElementById('dySheet');cv.style.display='block';
+ var r=window.devicePixelRatio||1,W=cv.clientWidth||320,H=220;cv.width=W*r;cv.height=H*r;
+ var x=cv.getContext('2d');x.setTransform(r,0,0,r,0,0);x.clearRect(0,0,W,H);
+ var L=40,R=W-40,T=18,B=H-26,r0=1000,r1=2100;
+ var mh=Math.max.apply(null,c.hp)||1,mt=Math.max.apply(null,c.tq)||1;
+ var nice=function(v){var p=Math.pow(10,Math.floor(Math.log10(v)));return Math.ceil(v/p*1.1)*p;};
+ var hpTop=nice(mh),tqTop=nice(mt);
+ x.strokeStyle='#26241f';x.lineWidth=1;x.font='10px sans-serif';x.fillStyle='#8a8578';
+ for(var i=0;i<=4;i++){var y=B-(B-T)*i/4;x.beginPath();x.moveTo(L,y);x.lineTo(R,y);x.stroke();
+  x.textAlign='right';x.fillStyle='#ff8a1e';x.fillText(Math.round(hpTop*i/4),L-4,y+3);
+  x.textAlign='left';x.fillStyle='#7ee0ff';x.fillText(Math.round(tqTop*i/4),R+4,y+3);}
+ x.textAlign='center';x.fillStyle='#8a8578';
+ for(var rr=1000;rr<=2100;rr+=200){var xx=L+(R-L)*(rr-r0)/(r1-r0);x.fillText(rr,xx,H-10);}
+ x.fillText('RPM',(L+R)/2,H-1);
+ var plot=function(arr,top,col){x.strokeStyle=col;x.lineWidth=2.5;x.beginPath();var st=0;
+  for(var i=0;i<arr.length;i++){if(!arr[i])continue;var xx=L+(R-L)*(c.rpm[i]-r0)/(r1-r0),yy=B-(B-T)*arr[i]/top;
+   if(!st){x.moveTo(xx,yy);st=1;}else x.lineTo(xx,yy);}x.stroke();};
+ plot(c.tq,tqTop,'#7ee0ff');plot(c.hp,hpTop,'#ff8a1e');
+ x.font='700 11px sans-serif';x.textAlign='left';x.fillStyle='#ff8a1e';x.fillText('HP '+Math.round(mh),L+6,T+10);
+ x.fillStyle='#7ee0ff';x.fillText('LB-FT '+Math.round(mt),L+80,T+10);
+}
 var _fq=Promise.resolve();
 // One request at a time (the board's server is single-threaded), but never wait
 // forever: a request the board never answers used to block every later one,

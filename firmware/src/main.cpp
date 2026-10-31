@@ -198,6 +198,7 @@ static void benchKeys() {
                     for (int i = 0; i < 5; i++) { pp[i] = (uint8_t)constrain(v[i], 0, 2); if (uu[i] < pp[i]) uu[i] = pp[i]; }
                     Engine.saveParts(); EEPROM.commit(); continue;
                 }
+                if (!strcmp(tok, "dynopull")) { Serial.println(Engine.dynoStart() ? "[dyno] live pull started" : "[dyno] engine not running"); continue; }
                 if (!strcmp(tok, "dyno")) {
                     EngineSim::DynoResult r = Engine.dynoRun();
                     Serial.printf("[dyno] parts %u%u%u%u%u  %.0f hp @ %.0f  boost %.0f psi  egt %.0fF  derate %d surge %d pcp %d blown %d\n",
