@@ -603,7 +603,7 @@ const sections = [
  ], toggles:[
    {key:'battProtect',label:'Battery Protection',desc:'The fuel gauge follows your real pack. At 3.3 V per cell the engine sputters, runs dry and dies, the truck coasts to a stop and the hazards come on - protecting the LiPo. Only active with the ESC on (its BEC powers the sense), never on USB alone.'}
  ]},
- { id:'tune', icon:'&#x1F527;', title:'Engine Tuning & Dyno', settings:[
+ { id:'tune', icon:'&#x1F527;', title:'Engine Tuning', settings:[
    {key:'boostMax',label:'Wastegate Spring',min:28,max:60,step:1,unit:'psi',group:'Air System',desc:'Boost ceiling. More boost = more AIR = supports more fuel. But fuel without air just makes heat, and big cylinder pressure with hot timing breaks parts. Balance it.'},
    {key:'clutchRelease',label:'Clutch Release',min:0,max:3,step:0.1,unit:'s',group:'Drag Race',desc:'How long the driver takes to let the clutch out on a launch. 0 dumps it; 1-2 s feeds it in and keeps the launch from bogging.'},
    {key:'raceEscTop',label:'Race ESC Top Speed',min:65,max:160,step:1,unit:'mph',desc:'Sim speed at which the real truck is flat out in race mode (street is 65). Scale-correct for a 1/14 is the trap speed, ~136. On the driveway: if the truck crosses 94 ft before the sound finishes, raise it; if it is still short when the sound finishes, lower it.'}
@@ -921,7 +921,7 @@ function rbPrimeStage(){
   el.style.width=(RB.prime*100)+'%';RB.raf=requestAnimationFrame(fr);})(0);}
 function rbFinish(){
  cancelAnimationFrame(RB.raf);
- var q=rbQuality();var pct=Math.round(86+14*q);if(q>=0.999)pct=100;
+ var qual=rbQuality();var pct=Math.round(86+14*qual);if(qual>=0.999)pct=100;   // not 'q' - it hid q()
  q('/cmd?action=REBUILD:'+pct).catch(function(){});
  var msg=pct>=100?'BLUEPRINTED - 100% - she\'s better than the factory ever built her':
    (pct>=95?'Clean work - '+pct+'% - she\'ll pull hard':
@@ -1575,8 +1575,10 @@ function shDown(e){e.preventDefault();var p=shPt(e);
   var tx=f.ox+0.66*f.w,ty=f.oy+0.62*f.h;
   if(Math.hypot(p.x-tx,p.y-ty)<70){
    SH.st='done';SH.fireT=SH.t;SH.doneHold=SH.t+1.6;SH.shake=1.5;shRumble();
-   var q=0;SH.quality.forEach(function(v){q+=v;});q=SH.quality.length?q/SH.quality.length:1;
-   var pct=Math.round(86+14*q);if(q>=0.995)pct=100;SH.pct=pct;
+   // NOT 'q': a var named q here hoists over the whole of shDown and hides the
+   // q() request function - both rebuild buttons threw and never reached the board
+   var qual=0;SH.quality.forEach(function(v){qual+=v;});qual=SH.quality.length?qual/SH.quality.length:1;
+   var pct=Math.round(86+14*qual);if(qual>=0.995)pct=100;SH.pct=pct;
    q('/cmd?action=REBUILD:'+pct).catch(function(){});}
   return;}}
 

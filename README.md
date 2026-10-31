@@ -34,6 +34,7 @@ no laptop needed after the first flash.
 - [First power-up](#first-power-up)
 - [The phone control panel](#the-phone-control-panel)
 - [The engine, parts and tuning](#the-engine-parts-and-tuning)
+- [Tuning guide (no cheat codes)](#tuning-guide-no-cheat-codes)
 - [Race mode and the drag strip](#race-mode-and-the-drag-strip)
 - [The gyro (GY-521 / MPU-6050)](#the-gyro-gy-521--mpu-6050)
 - [Active front suspension](#active-front-suspension)
@@ -403,6 +404,55 @@ whether it lives. **Big-plunger injectors** bring the lope and the limiter pops.
 Runs a full transient pull on your current build and tune and reports
 horsepower and rpm, peak EGT, peak boost, and whether it ran hot, surged,
 over-pressured, or **blew up** (which costs real engine health).
+
+### Tuning guide (no cheat codes)
+
+There's no "best tune" printed here, and there never will be. The engine
+underneath is a real model of fuel, air, heat and pressure, so a good tune is
+something you **find** on the dyno, not something you copy. Here's how it
+thinks. Getting the number is on you.
+
+**The four things that kill an engine**
+| On the dyno it says… | What happened | The physics |
+|---|---|---|
+| **Running hot** (derate) | Exhaust gas temperature is up | Too much fuel for the air, or the burn happening too late in the stroke |
+| **Surge** | The turbo stalled its compressor | Too much boost asked for at too little airflow, usually low in the rev range |
+| **Over-pressure** | Peak cylinder pressure past what the rods take | Boost and timing both push cylinder pressure up |
+| **Blew up** | It melted a piston or threw a rod | One of the above, held too long. Costs real engine health. |
+
+**How each knob behaves**
+- **Fuel** makes power **only if there's air to burn it.** Past what the air can
+  take you get smoke, heat and not much more power. More fuel is the easy part;
+  feeding it air is the real tune.
+- **Timing** is the clever one. Advance burns the fuel earlier: more power, *cooler*
+  exhaust, but **higher cylinder pressure**. There's a sweet spot. Push past it
+  and power falls off while the pressure keeps climbing. Too little timing and the
+  heat goes out the exhaust instead of into the crank.
+- **Boost** (the wastegate) is air. More air lets you run more fuel, but it adds
+  cylinder pressure and asks more of the turbo. The bigger turbos make more boost
+  off the same wastegate setting.
+- **The intercooler** makes the boost denser and cooler. It's the quiet hero of
+  every big number.
+- **The bands are not all the same.** Low rpm has weak injection pressure and a
+  lazy turbo; high rpm has airflow but less time per stroke. A flat map is a lazy map.
+
+**How to find power**
+1. **Get a baseline.** Stock tune, your parts, one dyno pull. Write it down.
+2. **Change one thing at a time.** One band, small steps. Pull. Did it make power,
+   or just heat?
+3. **Read the failure, not just the number.** Running hot, surge and over-pressure
+   each point at a different knob. Fix the thing it's telling you about.
+4. **Match your parts to your tune.** A tune that's safe on forged rods will throw
+   a stock one. Big injectors with no turbo to feed them just make smoke.
+5. **A pull that blows up isn't a number.** It doesn't count.
+
+**Bragging rights**
+- Get the most horsepower out of each **parts tier** without blowing it up.
+- Beat the stock-tune dyno numbers in the parts table above on the same parts.
+- Make **1000 hp on stock rods.** It can be done. Carefully.
+- Best quarter mile in race mode, on a tune that survives the run.
+
+Post your dyno sheet and your build. No sheet, no record.
 
 ### Health and the rebuild
 Melting a piston or throwing a rod kills the engine. **REBUILD ENGINE** opens
