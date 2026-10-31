@@ -1,0 +1,9 @@
+# build output
+firmware/.pio/
+__pycache__/
+*.pyc
+# generated before every build by tools/pack_web.py
+firmware/src/WebAssets.h
+# optional baked-in sounds - not part of the public repo (see README > Building from source)
+firmware/src/HydSamples.h
+firmware/src/DangerClip.h

@@ -1,0 +1,19 @@
+# RCLC D15 - C15 pack: BAKED loops (whole firing cycles, spectrally matched,
+# RMS levelled). 16-bit mono PCM @44100. rpm values are MEASURED, not
+# taken from any filename - they drive pitch AND rung handover.
+name C15 ATS baked
+rate 44100
+eng 601.1 eng650.wav
+eng 865.5 eng800.wav
+eng 979.8 eng1000.wav
+eng 1063.1 eng1100.wav
+eng 1508.2 eng1500.wav
+eng 1584.0 eng1700.wav
+eng 2008.8 eng2000.wav
+coast 700.5 exh650.wav
+coast 1014.3 exh1000.wav
+coast 1335.4 exh1300.wav
+coast 1584.5 exh1500.wav
+coast 1902.1 exh1800.wav
+jake 1696.6 jake.wav
+turbo turbo.wav

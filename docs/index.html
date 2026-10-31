@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RCLC D15 Flasher</title>
+<meta name="description" content="Flash the RCLC D15 Engine Simulator firmware onto your board straight from the browser.">
+<link rel="icon" href="logo.png">
+<script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+<style>
+:root{
+  --bg:#0b0a12; --panel:#15131f; --panel2:#1c1929; --line:#2c2840; --text:#ece8f6; --dim:#9a93b3;
+  --pink:#ff3fa4; --cyan:#3fe0ff; --lime:#c6ff2e; --amber:#ffb238; --red:#ff5a4a;
+}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(1200px 600px at 50% -200px,#2a1640 0%,var(--bg) 60%) fixed,var(--bg);color:var(--text);
+  font:16px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+a{color:var(--cyan)}
+.wrap{max-width:900px;margin:0 auto;padding:28px 16px 64px;display:flex;flex-direction:column;gap:22px}
+header{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px}
+header img{width:min(320px,80vw);height:auto}
+h1{margin:0;font:800 clamp(28px,6vw,44px)/1.05 "Arial Black","Segoe UI",sans-serif;letter-spacing:.02em;
+  background:linear-gradient(90deg,var(--pink),var(--amber));-webkit-background-clip:text;background-clip:text;color:transparent}
+.tag{color:var(--dim);max-width:60ch;margin:0}
+.vibe{display:inline-block;font-size:.85rem;color:var(--lime);border:1px solid #3d4a14;background:#161c08;padding:3px 10px;border-radius:999px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px}
+h2{margin:0 0 12px;font:800 1.05rem/1.2 "Segoe UI",sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--cyan)}
+.install{display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;border-color:#4a2a5a;
+  background:linear-gradient(180deg,#1f1430,#15131f)}
+esp-web-install-button button,.btnlike{font:800 1.15rem/1 "Segoe UI",sans-serif;letter-spacing:.05em;text-transform:uppercase;
+  background:linear-gradient(90deg,var(--pink),#ff7a3f);color:#14060e;border:0;border-radius:10px;padding:16px 34px;cursor:pointer}
+esp-web-install-button button:hover{filter:brightness(1.1)}
+.warn{color:var(--amber);font-size:.92rem;margin:0}
+.bad{display:none;color:var(--red);font-weight:700}
+ol,ul{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:8px}
+li b{color:#fff}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.card{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:8px;text-decoration:none;color:var(--text)}
+a.card:hover{border-color:var(--cyan)}
+.card .t{font-weight:800;color:#fff}
+.card .d{color:var(--dim);font-size:.92rem}
+code{background:#0f0d17;border:1px solid var(--line);border-radius:5px;padding:1px 6px;font:.9em Consolas,monospace;color:var(--lime)}
+.kv{display:grid;grid-template-columns:max-content 1fr;gap:6px 16px}
+.kv div:nth-child(odd){color:var(--dim)}
+footer{text-align:center;color:var(--dim);font-size:.85rem}
+:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img src="logo.png" alt="RC LARGECARS">
+    <h1>RCLC D15 ENGINE SIMULATOR</h1>
+    <p class="tag">A real-time diesel truck simulator for RC semis: recorded Cat C15 sound, a physics drivetrain, turbo, jake brake, air brakes, lights, gyro hills and active suspension - on one small ESP32-S3 board.</p>
+    <span class="vibe">&#x1F916; vibe coded &middot; built with AI, tuned by ear</span>
+  </header>
+
+  <section class="panel install" aria-labelledby="flash">
+    <h2 id="flash">Flash your board</h2>
+    <esp-web-install-button manifest="manifest.json">
+      <button slot="activate">Install firmware</button>
+      <span slot="unsupported" class="bad" style="display:block">Your browser can't talk to USB devices. Open this page in Chrome or Edge on a computer.</span>
+      <span slot="not-allowed" class="bad" style="display:block">This page needs to be opened over https.</span>
+    </esp-web-install-button>
+    <p class="warn">Chrome or Edge on Windows, Mac, Linux or ChromeOS. Phones and Firefox/Safari can't flash.</p>
+  </section>
+
+  <section class="panel" aria-labelledby="steps">
+    <h2 id="steps">How to flash</h2>
+    <ol>
+      <li><b>Unplug the battery</b> from the board. The USB cable powers it for flashing.</li>
+      <li>Plug the <b>Freenove ESP32-S3 module</b> into your computer with a USB-C <b>data</b> cable (some charge-only cables have no data wires). The module has two USB-C sockets: use the one that shows up as a <b>CH343</b> serial port. If nothing appears in the next step, try the other socket.</li>
+      <li>Press <b>Install firmware</b> above and pick the port called <b>USB-Enhanced-SERIAL CH343</b> (Windows) or <b>/dev/cu.wchusbserial&hellip;</b> (Mac).</li>
+      <li>First install: say <b>yes</b> to erasing the device so it starts clean. Updating later: say <b>no</b> to keep your settings, tune and gyro calibration.</li>
+      <li>Wait for <b>"Installation complete"</b> (about a minute), then unplug USB.</li>
+    </ol>
+    <p class="warn" style="margin-top:12px">Windows can't see the port? Install the WCH CH343 driver from wch-ic.com, then try again.</p>
+  </section>
+
+  <section class="panel" aria-labelledby="after">
+    <h2 id="after">After flashing</h2>
+    <ol>
+      <li><b>Sound pack:</b> download <a href="downloads/RCLC_D15_SD_card.zip">RCLC_D15_SD_card.zip</a>, unzip it onto a FAT32 microSD card (4&ndash;32 GB) so the card has a <code>packs/rclc</code> folder, and put the card in the board.</li>
+      <li><b>Power up</b> from your ESC's BEC and battery. The truck boots in about 5 seconds.</li>
+      <li><b>Connect your phone</b> to the Wi-Fi <code>RCLC-D15</code>, password <code>truckin123</code>, and open <code>http://192.168.4.1</code>. That's the whole control panel: tune, sound, lights, gyro, suspension, race mode.</li>
+      <li><b>Pick your receiver</b> under SETUP &rarr; RC CHANNEL MAP (iBUS, SBUS or PWM is detected automatically).</li>
+    </ol>
+  </section>
+
+  <section class="panel" aria-labelledby="more">
+    <h2 id="more">More</h2>
+    <div class="grid">
+      <a class="card" href="https://github.com/turbotike/d15-engine-simulator-#readme"><span class="t">&#x1F4D6; The manual</span><span class="d">Everything: wiring, features, the web UI, tuning, the gyro, troubleshooting.</span></a>
+      <a class="card" href="studio.html"><span class="t">&#x1F3A7; Sound Studio</span><span class="d">Build your own engine pack from 5 engine + 5 exhaust recordings and save it straight to the SD card.</span></a>
+      <a class="card" href="https://github.com/turbotike/d15-engine-simulator-#ordering-the-board"><span class="t">&#x1F6E0; Get a board</span><span class="d">Order the RCLC D15 from PCBWay, assembled, then solder 8 headers.</span></a>
+      <a class="card" href="https://github.com/turbotike/d15-engine-simulator-#the-gyro-gy-521--mpu-6050"><span class="t">&#x1F9ED; Add the gyro</span><span class="d">A $3 GY-521 gives you real hills, smart shifting and rollover cut-off.</span></a>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="ver">
+    <h2 id="ver">This build</h2>
+    <div class="kv">
+      <div>Board</div><div>RCLC D15 (ESP32-S3, Freenove Lite MCN16R8: 16 MB flash, 8 MB PSRAM)</div>
+      <div>Firmware</div><div>1.0.0</div>
+      <div>Source</div><div><a href="https://github.com/turbotike/d15-engine-simulator-">github.com/turbotike/d15-engine-simulator-</a></div>
+    </div>
+  </section>
+
+  <footer>RC LARGECARS &middot; RCLC D15 &middot; vibe coded with AI</footer>
+</div>
+</body>
+</html>

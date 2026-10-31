@@ -1,0 +1,509 @@
+<title>RCLC Sound Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: the 5x5 grid is the page (engine row + exhaust row x five rpm holds); the test drive stays beside it. */
+:root{
+  --bg:#f4f2ee; --card:#ffffff; --soft:#ebe8e2; --line:#dcd7cf;
+  --fg:#1d2024; --dim:#5f646b; --accent:#d9861c; --accent-ink:#ffffff; --accent-soft:#fbe9d0;
+  --ok:#2f8f5b; --ok-soft:#dcf1e4; --warn:#a96a00; --warn-soft:#fbefd2; --bad:#c23a28; --bad-soft:#f9dfda;
+  --display:"Saira Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#15181b; --card:#1e2226; --soft:#272c31; --line:#343a40;
+  --fg:#eeebe4; --dim:#a3a9ae; --accent:#f0a540; --accent-ink:#1a1206; --accent-soft:#3a2c17;
+  --ok:#6fd39b; --ok-soft:#1d3428; --warn:#f2c461; --warn-soft:#3a3018; --bad:#f07a68; --bad-soft:#3d221e; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#15181b; --card:#1e2226; --soft:#272c31; --line:#343a40;
+  --fg:#eeebe4; --dim:#a3a9ae; --accent:#f0a540; --accent-ink:#1a1206; --accent-soft:#3a2c17;
+  --ok:#6fd39b; --ok-soft:#1d3428; --warn:#f2c461; --warn-soft:#3a3018; --bad:#f07a68; --bad-soft:#3d221e; color-scheme:dark}
+html,body{background:var(--bg);color:var(--fg)}
+body{font-family:var(--body);font-size:16px;line-height:1.5;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+h1,h2,h3{font-family:var(--display);font-weight:700;margin:0;text-wrap:balance;letter-spacing:.01em}
+h1{font-size:36px;line-height:1.05}
+h2{font-size:24px;display:flex;align-items:center;gap:10px}
+h3{font-size:19px}
+h2 .n{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-size:18px;flex:none}
+p{margin:0}
+.lead{color:var(--dim);max-width:66ch;margin-top:6px}
+.cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,380px);gap:22px;align-items:start}
+@media (max-width:960px){.cols{grid-template-columns:minmax(0,1fr)}}
+.side{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);display:flex;flex-direction:column;gap:22px}
+@media (max-width:960px){.side{position:static}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.hint{color:var(--dim);font-size:14px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+button,.btn{font-family:var(--body);font-weight:600;font-size:15px;background:var(--soft);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:10px 14px;cursor:pointer;user-select:none;touch-action:none}
+button:hover,.btn:hover{border-color:var(--accent)}
+button:focus-visible,select:focus-visible,input:focus-visible,.btn:focus-within{outline:3px solid var(--accent);outline-offset:2px}
+button.primary,button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button.small{font-size:13px;padding:5px 9px}
+select,input[type=text]{font-family:var(--body);font-size:15px;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--soft);color:var(--fg)}
+/* the grid */
+.gridwrap{overflow-x:auto}
+.holds{display:grid;grid-template-columns:110px repeat(5,minmax(132px,1fr));gap:8px;min-width:790px}
+.holds .colh{font-family:var(--display);font-size:18px;font-weight:700;text-align:center;padding-bottom:2px}
+.holds .colh small{display:block;font-family:var(--body);font-size:12px;font-weight:500;color:var(--dim)}
+.holds .rowh{font-family:var(--display);font-size:18px;font-weight:700;display:flex;flex-direction:column;justify-content:center}
+.holds .rowh small{font-family:var(--body);font-size:12px;font-weight:500;color:var(--dim)}
+.cell{border:2px dashed var(--line);border-radius:10px;padding:10px;min-height:128px;display:flex;flex-direction:column;gap:6px;justify-content:center;align-items:center;text-align:center;background:var(--soft);position:relative}
+.cell.over{border-color:var(--accent);background:var(--accent-soft)}
+.cell.filled{border-style:solid;background:var(--card);align-items:stretch;text-align:left;justify-content:flex-start}
+.cell.ok{border-color:var(--ok)} .cell.warn{border-color:var(--warn)} .cell.bad{border-color:var(--bad)}
+.cell.playing{background:var(--accent-soft)}
+.cell .fn{font-size:12.5px;color:var(--dim);overflow-wrap:anywhere;line-height:1.3}
+.cell .big{font-family:var(--mono);font-size:20px;font-variant-numeric:tabular-nums;line-height:1.1}
+.cell .big small{font-family:var(--body);font-size:12px;color:var(--dim)}
+.cell .acts{display:flex;gap:6px;margin-top:auto}
+.cell .acts button{flex:1}
+.cell .busy{font-size:13px;color:var(--dim)}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;padding:3px 9px;border-radius:20px;white-space:nowrap;align-self:flex-start}
+.chip.ok{background:var(--ok-soft);color:var(--ok)} .chip.warn{background:var(--warn-soft);color:var(--warn)} .chip.bad{background:var(--bad-soft);color:var(--bad)}
+.why{font-size:12.5px;color:var(--dim);line-height:1.35}
+.score{display:flex;flex-wrap:wrap;gap:8px}
+/* extras */
+.drop{border:2px dashed var(--line);border-radius:12px;padding:18px 14px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;background:var(--soft)}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.list{display:flex;flex-direction:column;gap:8px}
+.snd{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:10px}
+.play{width:40px;height:40px;border-radius:50%;padding:0;display:grid;place-items:center}
+/* sim */
+canvas{width:100%;max-width:100%;display:block}
+.drive3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.drive3 button{padding:14px 6px;font-size:17px}
+.pedal{position:relative;height:70px;border-radius:12px;background:var(--soft);border:1px solid var(--line);overflow:hidden;cursor:pointer;touch-action:none}
+.pedal i{position:absolute;inset:0 auto 0 0;width:0;background:var(--accent);opacity:.85}
+.pedal span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:22px;font-weight:700;letter-spacing:.06em;pointer-events:none}
+.stats{display:flex;gap:10px}
+.stat{flex:1;text-align:center;background:var(--soft);border-radius:10px;padding:8px}
+.stat b{display:block;font-family:var(--mono);font-size:22px;font-variant-numeric:tabular-nums}
+.stat small{color:var(--dim);font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+.light{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:var(--soft);font-weight:600}
+.light i{width:14px;height:14px;border-radius:50%;background:var(--dim);flex:none}
+.light.ok i{background:var(--ok)} .light.warn i{background:var(--warn)} .light.bad i{background:var(--bad)}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{flex:1;border:0;border-radius:0;font-size:14px;padding:9px 6px}
+pre{background:var(--soft);border-radius:10px;padding:12px;margin:0;overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.55}
+details.adv summary{cursor:pointer;color:var(--dim);font-size:14px}
+details.adv label{display:flex;gap:8px;align-items:flex-start;font-size:14px;margin-top:8px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>RCLC Sound Studio</h1>
+    <p class="lead">Build a truck sound from 5 engine holds and 5 exhaust holds. Drop each recording (a WAV or the video itself) into its box. The studio measures the real rpm, finds the steadiest part, cuts a clean loop, plays it the way the RCLC D15 board does, then saves the finished pack straight onto your SD card. Your files never leave this computer.</p>
+  </header>
+
+  <div class="cols">
+    <main style="display:flex;flex-direction:column;gap:22px;min-width:0">
+      <section class="card">
+        <h2><span class="n">1</span>The engine</h2>
+        <div class="row">
+          <label class="hint" for="ename">Engine</label><input id="ename" type="text" placeholder="e.g. Detroit 8V92, Cat 3406" style="flex:1;min-width:200px">
+          <label class="hint" for="etype">Type</label>
+          <select id="etype"><option value="4">Four-stroke (Cat, Cummins, Detroit Series 60...)</option><option value="2">Two-stroke (Detroit 71 / 92 series)</option></select>
+        </div>
+        <p class="hint">The type matters: a two-stroke fires every cylinder every turn, so its rpm is measured differently.</p>
+      </section>
+
+      <section class="card">
+        <h2><span class="n">2</span>The 5&times;5 holds</h2>
+        <p class="hint">Each box wants one recording of the engine held steady at that rpm, about 15 seconds. Drop the file on the box or press it to choose one. Videos work.</p>
+        <div class="score" id="score"></div>
+        <div class="gridwrap"><div class="holds" id="holds"></div></div>
+      </section>
+
+      <section class="card">
+        <h2><span class="n">3</span>Extras</h2>
+        <div class="drop" id="xdrop"><b>Drop start, shutdown, jake, horn and air-brake recordings here</b><label class="btn">Choose files<input id="xpick" type="file" accept="audio/*,video/*,.wav" multiple hidden></label></div>
+        <div class="list" id="xlist"></div>
+      </section>
+
+      <section class="card">
+        <h2><span class="n">4</span>Save to the SD card</h2>
+        <ol style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px">
+          <li>Put the truck's SD card in this computer.</li>
+          <li>Press <b>Save to SD card</b> and pick the card (the top of it, not a folder inside).</li>
+          <li>Put the card back in the truck and power up. It plays your new pack.</li>
+        </ol>
+        <p class="hint">A pack already on the card is kept as a backup (packs/rclc_backup_...), so you can always go back. Works in Chrome or Edge.</p>
+        <div class="row"><button class="primary" id="bSave">Save to SD card</button><span class="hint" id="saveMsg" role="status"></span></div>
+        <details class="adv"><summary>What gets written</summary><pre id="manifest" style="margin-top:8px"></pre></details>
+      </section>
+    </main>
+
+    <aside class="side">
+      <section class="card" aria-label="Test drive">
+        <h2>Test drive</h2>
+        <div class="seg" role="group" aria-label="What to play">
+          <button id="useMine" class="on">Your 5&times;5</button><button id="useC15">C15 (reference)</button>
+        </div>
+        <canvas id="tach" width="640" height="330" aria-label="Tachometer"></canvas>
+        <div class="stats"><div class="stat"><small>RPM</small><b id="rRpm">0</b></div><div class="stat"><small>Gear</small><b id="rGear">off</b></div></div>
+        <div class="drive3"><button class="primary" id="bEngine">Start</button><button id="bDrive" aria-pressed="false">Drive</button><button id="bJake" aria-pressed="false">Jake</button></div>
+        <div class="pedal" id="pedal" role="slider" aria-label="Gas pedal" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0"><i id="pedalBar"></i><span id="pedalTxt">HOLD FOR GAS</span></div>
+        <div class="row"><button id="bHorn">Horn</button><button id="bAir">Air brake</button><button id="bBlip">Rev</button></div>
+        <div class="light" id="light"><i></i><span id="lightTxt">Start the engine to check the volume</span></div>
+        <div class="row"><label for="vol" class="hint">Volume</label><input id="vol" type="range" min="0" max="1" step="0.01" value="0.6" style="flex:1"></div>
+        <details class="adv"><summary>More options</summary>
+          <label><input type="checkbox" id="popOn" checked> <span>Add the board's firing pulse (the board adds a 6-cylinder pulse to every pack - leave on to hear exactly what the truck will play)</span></label>
+        </details>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<script>
+// ============================================================================
+//  RCLC Pack Studio - 5x5 holds.
+//  Playback copies the RCLC D15 EngineAudio: an engine ladder and an exhaust
+//  ladder, each blending its two nearest rungs by rpm, each rung pitched by
+//  sim rpm / recorded rpm (0.5x-2.1x), plus the board's firing pulse.
+//  Every hold is analysed here: rpm from the comb of engine orders (crank rate
+//  for a 2-stroke, half-crank for a 4-stroke), steadiest 3 s found, a loop cut
+//  to whole firing cycles with a quarter-cycle seam, then levelled like the
+//  C15 (engine -17.9 dB, exhaust -15.2 dB RMS).
+// ============================================================================
+const HOLDS = [{key:"idle",label:"Idle",rpm:650,sub:"whatever it idles at"},{key:"1000",label:"1000",rpm:1000},{key:"1400",label:"1400",rpm:1400},{key:"1800",label:"1800",rpm:1800},{key:"2100",label:"2100",rpm:2100,sub:"top / governed"}];
+const ROWS = [{key:"eng",label:"Engine",sub:"phone near the engine",role:"eng",db:-17.9,prefix:"eng"},{key:"exh",label:"Exhaust",sub:"phone behind the stack",role:"coast",db:-15.2,prefix:"exh"}];
+const C15_MIX_DB=-11.4, SR=44100;
+const decoder=new OfflineAudioContext(1,1,SR);
+const grid={}; ROWS.forEach(r=>grid[r.key]=HOLDS.map(()=>null));
+let extras=[], mode="mine", files=[], c15Files=null;
+const S={on:false,starting:false,rpm:0,thr:0,held:false,drive:false,gear:0,jake:false,cut:0,target:0,idle:650,gov:2100,blip:0};
+const cyc=()=>+document.getElementById("etype").value===2?1:2;   // revolutions per firing cycle
+
+// ---------------------------------------------------------------- FFT + rpm
+function fft(re,im){const n=re.length;for(let i=1,j=0;i<n;i++){let b=n>>1;for(;j&b;b>>=1)j^=b;j^=b;if(i<j){[re[i],re[j]]=[re[j],re[i]];[im[i],im[j]]=[im[j],im[i]];}}
+  for(let len=2;len<=n;len<<=1){const a=-2*Math.PI/len,wr=Math.cos(a),wi=Math.sin(a);for(let i=0;i<n;i+=len){let cr=1,ci=0;for(let j=0;j<len/2;j++){const ur=re[i+j],ui=im[i+j],k=i+j+len/2,vr=re[k]*cr-im[k]*ci,vi=re[k]*ci+im[k]*cr;re[i+j]=ur+vr;im[i+j]=ui+vi;re[k]=ur-vr;im[k]=ui-vi;const t=cr*wr-ci*wi;ci=cr*wi+ci*wr;cr=t;}}}}
+const NFFT=16384, HANN=Float32Array.from({length:NFFT},(_,i)=>0.5-0.5*Math.cos(2*Math.PI*i/NFFT));
+function logSpec(x,s){const re=new Float32Array(NFFT),im=new Float32Array(NFFT);for(let i=0;i<NFFT;i++)re[i]=(x[s+i]||0)*HANN[i];fft(re,im);
+  const S=new Float32Array(NFFT/2);for(let i=0;i<NFFT/2;i++)S[i]=Math.log1p(Math.hypot(re[i],im[i])*50);return S;}
+function combRpm(S,target,c){ // comb of orders spaced F (crank rate / c); search 0.75-1.3x the target
+  const bin=SR/NFFT, F0=target/60/c, at=f=>{const p=f/bin,i=p|0,t=p-i;return S[i]*(1-t)+S[i+1]*t;};
+  let best=-1e9,bF=F0;
+  // score = AVERAGE tooth minus the between-teeth level: a total (or sqrt-normalised) score favours
+  // low guesses because more teeth fit under 900 Hz, which locked a C15 idle onto 2/3 of its rpm
+  for(let F=F0*0.75;F<=F0*1.3;F+=0.01){let v=0,w=0,n=0;for(let k=2;k*F<900&&k<80;k++){v+=at(k*F);w+=at((k-0.5)*F);n++;} v=(v-w)/n; if(v>best){best=v;bF=F;}}
+  return bF*60*c;
+}
+function mono(buf){const n=buf.length,c=buf.numberOfChannels,out=new Float32Array(n);for(let ch=0;ch<c;ch++){const d=buf.getChannelData(ch);for(let i=0;i<n;i++)out[i]+=d[i]/c;}return out;}
+function analyseHold(x,target){
+  const c=cyc(), hop=Math.round(0.25*SR), track=[];
+  for(let s=0;s+NFFT<x.length;s+=hop){const S=logSpec(x,s);let e=0;for(let i=s;i<s+NFFT;i++)e+=x[i]*x[i];track.push({t:(s+NFFT/2)/SR,rpm:combRpm(S,target,c),db:10*Math.log10(e/NFFT+1e-12)});}
+  if(track.length<4) return {err:"Too short - need at least 2 seconds of steady engine"};
+  const loud=Math.max(...track.map(f=>f.db));
+  const W=Math.min(12,track.length-1); let best=null;
+  // robust: median rpm and the 10-90% spread, so one frame that slips to a harmonic can't fail a good hold
+  const pct=(a,q)=>{const b=a.slice().sort((x,y)=>x-y);return b[Math.min(b.length-1,Math.max(0,Math.round(q*(b.length-1))))];};
+  for(let i=0;i+W<=track.length;i++){const w=track.slice(i,i+W), r=w.map(f=>f.rpm), m=pct(r,0.5);
+    const spread=(pct(r,0.9)-pct(r,0.1))/m, lv=w.map(f=>f.db), quiet=Math.max(0,loud-Math.min(...lv)-6)/10;
+    const score=spread+quiet; if(!best||score<best.score) best={i,score,spread,rpm:m};}
+  const a=Math.round((track[best.i].t-0.15)*SR), b=Math.round((track[best.i+W-1].t+0.15)*SR);
+  return {rpm:best.rpm, spread:best.spread, a:Math.max(0,a), b:Math.min(x.length,b), track};
+}
+function cutLoop(x,a,b,rpm){
+  const c=cyc(), P=SR*60/rpm*c, xf=Math.max(16,Math.round(P/4)), seg=x.subarray(a,b);
+  const n=Math.max(1,Math.floor((seg.length-xf-8)/P)), L0=Math.round(n*P);
+  let bestL=L0,bc=-2; const span=Math.max(4,Math.round(0.01*L0));
+  for(let L=L0-span;L<=L0+span;L++){ if(L+xf>seg.length||L<8) continue; let d=0,na=0,nb=0;
+    for(let i=0;i<xf;i++){const u=seg[i],v=seg[L+i];d+=u*v;na+=u*u;nb+=v*v;} const cc=d/Math.sqrt(na*nb+1e-12); if(cc>bc){bc=cc;bestL=L;}}
+  const out=new Float32Array(bestL);
+  for(let i=0;i<bestL;i++) out[i]= i<xf ? seg[i]*(i/xf)+seg[bestL+i]*(1-i/xf) : seg[i];
+  return {loop:out, seam:bc, revs:n*c};
+}
+function rmsDb(x){let s=0;for(const v of x)s+=v*v;return 10*Math.log10(s/x.length+1e-12);}
+function peakRail(x){let pk=0;for(const v of x)pk=Math.max(pk,Math.abs(v));if(pk<0.9)return 0;let n=0;for(const v of x)if(Math.abs(v)>=pk*0.98)n++;return n/x.length*100;}
+
+// ---------------------------------------------------------------- loading a hold
+async function loadHold(row,col,arrayBuf,name){
+  const cell={name,busy:true,raw:arrayBuf.slice(0)}; grid[row][col]=cell; renderGrid();
+  try{
+    const buf=await decoder.decodeAudioData(arrayBuf), x=mono(buf), H=HOLDS[col];
+    const an=analyseHold(x,H.rpm);
+    if(an.err){ Object.assign(cell,{busy:false,verdict:{cls:"bad",txt:"Unusable",why:an.err}}); renderGrid(); return; }
+    const cut=cutLoop(x,an.a,an.b,an.rpm), R=ROWS.find(r=>r.key===row);
+    const g=Math.pow(10,(R.db-rmsDb(cut.loop))/20), loop=cut.loop.map(v=>Math.tanh(v*g*1.0));
+    const lb=new AudioBuffer({length:loop.length,sampleRate:SR,numberOfChannels:1}); lb.copyToChannel(loop,0);
+    const rail=peakRail(x.subarray(an.a,an.b));
+    Object.assign(cell,{busy:false,rpm:Math.round(an.rpm),spread:an.spread,seam:cut.seam,dur:loop.length/SR,rail,buf:lb,from:[an.a/SR,an.b/SR],x,a:an.a,b:an.b,row});
+    cell.verdict=verdictFor(cell,H);
+  }catch(e){ console.warn(e); Object.assign(cell,{busy:false,verdict:{cls:"bad",txt:"Can't read it",why:"Couldn't open that file. Try the original video or a WAV."}}); }
+  rebuildFiles(); renderGrid();
+}
+function verdictFor(c,H){
+  const off=(c.rpm-H.rpm)/H.rpm;
+  if(H.key!=="idle"&&Math.abs(off)>0.12) return {cls:"warn",txt:"Held "+c.rpm+", not "+H.label,why:"It still works - the pack uses the real rpm - but it leaves a gap. Re-record at "+H.label+" if you can."};
+  if(c.spread>0.05&&!c.manual) return {cls:"warn",txt:"rpm unclear",why:"Either the engine wandered or the sound is too muddy to measure. Check the tach in the video and type its rpm above."};
+  if(c.rail>2) return {cls:"warn",txt:"Distorted",why:"The recording clips at the loud parts. Phone too close or auto-gain."};
+  if(c.seam<0.5) return {cls:"warn",txt:"Rough loop",why:"The loop doesn't join smoothly - wind or traffic in the recording?"};
+  return {cls:"ok",txt:"Good",why:""};
+}
+
+// ---------------------------------------------------------------- grid UI
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+function renderGrid(){
+  const g=document.getElementById("holds"); let h='<div></div>';
+  HOLDS.forEach(H=>h+='<div class="colh">'+H.label+(H.key==="idle"?'':' rpm')+(H.sub?'<small>'+H.sub+'</small>':'')+'</div>');
+  ROWS.forEach(R=>{
+    h+='<div class="rowh">'+R.label+'<small>'+R.sub+'</small></div>';
+    HOLDS.forEach((H,ci)=>{
+      const c=grid[R.key][ci], id='cell_'+R.key+'_'+ci;
+      if(!c){ h+='<label class="cell" id="'+id+'" data-row="'+R.key+'" data-col="'+ci+'"><b>Drop file</b><span class="hint">or press to choose</span><input type="file" accept="audio/*,video/*,.wav" hidden data-row="'+R.key+'" data-col="'+ci+'"></label>'; return; }
+      if(c.busy){ h+='<div class="cell filled" id="'+id+'" data-row="'+R.key+'" data-col="'+ci+'"><div class="fn">'+esc(c.name)+'</div><div class="busy">Measuring...</div></div>'; return; }
+      const v=c.verdict||{cls:"bad",txt:"?"};
+      h+='<div class="cell filled '+v.cls+(c.solo?' playing':'')+'" id="'+id+'" data-row="'+R.key+'" data-col="'+ci+'">'+
+        (c.rpm?'<label class="big" title="Measured - type the tach reading to correct it"><input type="number" min="300" max="3500" step="10" value="'+c.rpm+'" data-rpm="'+R.key+':'+ci+'" aria-label="rpm" style="width:84px;font-family:var(--mono);font-size:19px;padding:2px 6px;border-radius:6px;border:1px solid var(--line);background:var(--soft);color:var(--fg)"> <small>rpm'+(c.manual?' (typed)':'')+'</small></label>':'')+
+        '<span class="chip '+v.cls+'">'+(v.cls==="ok"?"&#10003; ":"! ")+esc(v.txt)+'</span>'+
+        (v.why?'<div class="why">'+esc(v.why)+'</div>':'')+
+        '<div class="fn">'+esc(c.name)+(c.dur?' &middot; '+c.dur.toFixed(1)+' s loop':'')+'</div>'+
+        '<div class="acts">'+(c.buf?'<button class="small" data-solo="'+R.key+':'+ci+'" aria-label="Listen">'+(c.solo?"&#9632; Stop":"&#9654; Listen")+'</button>':'')+
+        '<button class="small" data-clear="'+R.key+':'+ci+'" aria-label="Remove">Remove</button></div></div>';
+    });
+  });
+  g.innerHTML=h;
+  let good=0,warn=0,bad=0,empty=0; ROWS.forEach(R=>grid[R.key].forEach(c=>{ if(!c)empty++; else if(c.verdict?.cls==="ok")good++; else if(c.verdict?.cls==="warn")warn++; else if(c.verdict)bad++; }));
+  document.getElementById("score").innerHTML=
+    '<span class="chip ok">&#10003; '+good+' of 10 good</span>'+(warn?'<span class="chip warn">! '+warn+' to check</span>':'')+(bad?'<span class="chip bad">'+bad+' unusable</span>':'')+(empty?'<span class="chip warn">'+empty+' still empty</span>':'');
+  writeManifest();
+}
+const holdsEl=document.getElementById("holds");
+holdsEl.addEventListener("change",async e=>{const t=e.target;
+  if(t.type==="file"&&t.files[0]){const f=t.files[0]; loadHold(t.dataset.row,+t.dataset.col,await f.arrayBuffer(),f.name); return;}
+  if(t.dataset.rpm){ const [r,ci]=t.dataset.rpm.split(":"), c=grid[r][+ci], v=+t.value; if(!c||!(v>=300)) return;
+    // re-cut the loop to whole firing cycles at the typed rpm
+    const cut=cutLoop(c.x,c.a,c.b,v), R=ROWS.find(q=>q.key===r), g=Math.pow(10,(R.db-rmsDb(cut.loop))/20);
+    const lb=new AudioBuffer({length:cut.loop.length,sampleRate:SR,numberOfChannels:1}); lb.copyToChannel(cut.loop.map(q=>Math.tanh(q*g)),0);
+    Object.assign(c,{rpm:Math.round(v),manual:true,seam:cut.seam,dur:cut.loop.length/SR,buf:lb}); c.verdict=verdictFor(c,HOLDS[+ci]); rebuildFiles(); renderGrid(); }});
+["dragenter","dragover"].forEach(ev=>holdsEl.addEventListener(ev,e=>{const c=e.target.closest(".cell"); if(c){e.preventDefault(); c.classList.add("over");}}));
+["dragleave","drop"].forEach(ev=>holdsEl.addEventListener(ev,e=>{const c=e.target.closest(".cell"); if(c) c.classList.remove("over");}));
+holdsEl.addEventListener("drop",async e=>{const c=e.target.closest(".cell"); if(!c) return; e.preventDefault(); const f=e.dataTransfer.files[0]; if(f) loadHold(c.dataset.row,+c.dataset.col,await f.arrayBuffer(),f.name);});
+holdsEl.addEventListener("click",e=>{
+  const s=e.target.closest("[data-solo]"), cl=e.target.closest("[data-clear]");
+  if(s){ensureCtx(); const [r,ci]=s.dataset.solo.split(":"); const c=grid[r][+ci], was=c.solo; ROWS.forEach(R=>grid[R.key].forEach(x=>x&&(x.solo=false))); c.solo=!was; rebuildFiles(); renderGrid();}
+  if(cl){const [r,ci]=cl.dataset.clear.split(":"); grid[r][+ci]=null; rebuildFiles(); renderGrid();}
+});
+document.getElementById("etype").addEventListener("change",()=>{ /* re-measure everything with the new firing model */
+  ROWS.forEach(R=>grid[R.key].forEach((c,ci)=>{ if(c&&c.raw) loadHold(R.key,ci,c.raw.slice(0),c.name); }));
+});
+
+// ---------------------------------------------------------------- extras
+const XJOBS=[["start","Engine start"],["stop","Engine shutdown"],["jake","Jake brake"],["horn","Horn"],["air","Air brake"],["airdry","Air dryer"],["pbrakeon","Park brake on"],["pbrakeoff","Park brake off"],["ignore","Don't use"]];
+function guessX(n){n=n.toLowerCase(); if(/start/.test(n))return"start"; if(/shut|stop|off/.test(n))return"stop"; if(/jake|brake.?eng|engine.?brake/.test(n))return"jake"; if(/horn/.test(n))return"horn"; if(/dry/.test(n))return"airdry"; if(/air|brake/.test(n))return"air"; return"start";}
+async function loadExtras(list){
+  for(const f of list){ try{ const buf=await decoder.decodeAudioData(await f.arrayBuffer()); const x=mono(buf), role=guessX(f.name);
+    let rpm=0, loop=null; if(role==="jake"){ const an=analyseHold(x,1800); rpm=an.rpm?Math.round(an.rpm):1800;
+      if(an.rpm){ const cut=cutLoop(x,an.a,an.b,an.rpm), g=Math.pow(10,(-15-rmsDb(cut.loop))/20); loop=new AudioBuffer({length:cut.loop.length,sampleRate:SR,numberOfChannels:1}); loop.copyToChannel(cut.loop.map(v=>Math.tanh(v*g)),0); } }
+    const b=new AudioBuffer({length:x.length,sampleRate:SR,numberOfChannels:1}); const g=Math.pow(10,(-16-rmsDb(x))/20); b.copyToChannel(x.map(v=>Math.tanh(v*g)),0);
+    extras.push({name:f.name,buf:b,role,rpm,loop}); }catch(e){console.warn(e);} }
+  rebuildFiles(); renderExtras();
+}
+function renderExtras(){
+  const L=document.getElementById("xlist"); L.innerHTML="";
+  extras.forEach((x,i)=>{ const el=document.createElement("div"); el.className="snd";
+    el.innerHTML='<button class="play" data-xplay="'+i+'" aria-label="Listen">&#9654;</button><div style="min-width:0"><div style="font-weight:600;overflow-wrap:anywhere">'+esc(x.name)+'</div></div>'+
+      '<select data-xrole="'+i+'" aria-label="What is this">'+XJOBS.map(j=>'<option value="'+j[0]+'"'+(j[0]===x.role?' selected':'')+'>'+j[1]+'</option>').join("")+'</select>';
+    L.appendChild(el); });
+  writeManifest();
+}
+document.getElementById("xlist").addEventListener("change",e=>{const i=e.target.dataset.xrole; if(i!==undefined){extras[+i].role=e.target.value; rebuildFiles(); writeManifest();}});
+document.getElementById("xlist").addEventListener("click",e=>{const b=e.target.closest("[data-xplay]"); if(b) playBuf(extras[+b.dataset.xplay].buf);});
+const xdrop=document.getElementById("xdrop");
+["dragenter","dragover"].forEach(ev=>xdrop.addEventListener(ev,e=>{e.preventDefault();xdrop.classList.add("over");}));
+["dragleave","drop"].forEach(ev=>xdrop.addEventListener(ev,e=>{e.preventDefault();xdrop.classList.remove("over");}));
+xdrop.addEventListener("drop",e=>loadExtras([...e.dataTransfer.files]));
+document.getElementById("xpick").addEventListener("change",e=>loadExtras([...e.target.files]));
+
+// ---------------------------------------------------------------- the list for Mat
+// ---------------------------------------------------------------- building the pack (same format the board reads)
+// /packs/rclc/manifest.txt:  name / eng <rpm> <file> / coast <rpm> <file> / jake <rpm> <file> / horn / air
+// start.wav stop.wav airdry.wav pbrakeon.wav pbrakeoff.wav are found by FILE NAME.
+// The board needs at least one `coast` rung: with both rows filled the engine row is
+// `eng` and the exhaust row is `coast` (the C15 layout); with one row, it is `coast`.
+const FIXED={start:"start.wav",stop:"stop.wav",airdry:"airdry.wav",pbrakeon:"pbrakeon.wav",pbrakeoff:"pbrakeoff.wav"};
+function packPlan(){
+  const name=document.getElementById("ename").value.trim()||"My truck";
+  const rows=ROWS.map(R=>({R,cells:HOLDS.map((H,ci)=>({H,c:grid[R.key][ci]})).filter(x=>x.c&&x.c.buf&&x.c.rpm)}));
+  const both=rows[0].cells.length&&rows[1].cells.length, out=[], lines=["name "+name];
+  rows.forEach(({R,cells})=>cells.forEach(({H,c})=>{
+    const role=both?(R.key==="eng"?"eng":"coast"):"coast", fn=R.prefix+"_"+H.key+".wav";
+    out.push({fn,buf:c.buf,role,rpm:c.rpm}); }));
+  out.sort((a,b)=>(a.role!==b.role)?(a.role==="coast"?1:-1):a.rpm-b.rpm).forEach(f=>lines.push(f.role.padEnd(6)+" "+String(f.rpm).padStart(5)+"  "+f.fn));
+  const seen={};
+  extras.forEach(x=>{ if(x.role==="ignore"||seen[x.role]) return; seen[x.role]=1;
+    if(x.role==="jake"){ out.push({fn:"jake.wav",buf:x.loop||x.buf,role:"jake",rpm:x.rpm}); lines.push("jake   "+String(x.rpm).padStart(5)+"  jake.wav"); }
+    else if(x.role==="horn"){ out.push({fn:"horn.wav",buf:x.buf}); lines.push("horn   horn.wav"); }
+    else if(x.role==="air"){ out.push({fn:"airbrake1.wav",buf:x.buf}); lines.push("air    airbrake1.wav"); }
+    else if(FIXED[x.role]) out.push({fn:FIXED[x.role],buf:x.buf}); });
+  return {name,files:out,manifest:lines.join("\n")+"\n",ok:out.some(f=>f.role==="coast")};
+}
+function writeManifest(){
+  const P=packPlan(), el=document.getElementById("manifest");
+  el.textContent="packs/rclc/\n"+P.files.map(f=>"  "+f.fn+"  ("+f.buf.duration.toFixed(1)+" s)").join("\n")+"\n\nmanifest.txt\n"+P.manifest;
+}
+function wavBytes(buf){
+  const x=buf.getChannelData(0), n=x.length, b=new ArrayBuffer(44+n*2), v=new DataView(b);
+  const W=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));};
+  W(0,"RIFF");v.setUint32(4,36+n*2,true);W(8,"WAVE");W(12,"fmt ");v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);
+  v.setUint32(24,buf.sampleRate,true);v.setUint32(28,buf.sampleRate*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);W(36,"data");v.setUint32(40,n*2,true);
+  for(let i=0;i<n;i++){const s=Math.max(-1,Math.min(1,x[i]));v.setInt16(44+i*2,Math.round(s*32767),true);}
+  return new Uint8Array(b);
+}
+async function writeFile(dir,name,bytes){ const fh=await dir.getFileHandle(name,{create:true}); const w=await fh.createWritable(); await w.write(bytes); await w.close(); }
+async function copyDir(src,dst){ for await (const [n,h] of src.entries()){ if(h.kind==="file") await writeFile(dst,n,new Uint8Array(await (await h.getFile()).arrayBuffer())); else await copyDir(h,await dst.getDirectoryHandle(n,{create:true})); } }
+// Writes the pack to <root>/packs/rclc. An existing rclc is copied to rclc_backup_<date> first.
+async function writePack(root,progress){
+  const P=packPlan(); if(!P.ok) throw new Error("Add at least one engine or exhaust hold first.");
+  const packs=await root.getDirectoryHandle("packs",{create:true});
+  let had=false; try{ await packs.getDirectoryHandle("rclc"); had=true; }catch(e){}
+  let backup="";
+  if(had){ const d=new Date(), z=n=>String(n).padStart(2,"0");
+    backup="rclc_backup_"+d.getFullYear()+z(d.getMonth()+1)+z(d.getDate())+"_"+z(d.getHours())+z(d.getMinutes());
+    progress("Backing up the pack that's on the card...");
+    await copyDir(await packs.getDirectoryHandle("rclc"),await packs.getDirectoryHandle(backup,{create:true}));
+    await packs.removeEntry("rclc",{recursive:true}); }
+  const dir=await packs.getDirectoryHandle("rclc",{create:true});
+  for(let i=0;i<P.files.length;i++){ progress("Writing "+(i+1)+" of "+P.files.length+": "+P.files[i].fn); await writeFile(dir,P.files[i].fn,wavBytes(P.files[i].buf)); }
+  await writeFile(dir,"manifest.txt",new TextEncoder().encode(P.manifest));
+  return {n:P.files.length+1,backup,name:P.name};
+}
+document.getElementById("bSave").addEventListener("click",async()=>{
+  const msg=document.getElementById("saveMsg");
+  if(!window.showDirectoryPicker){ msg.textContent="This browser can't write to the card. Open this page in Chrome or Edge."; return; }
+  if(!packPlan().ok){ msg.textContent="Add at least one engine or exhaust hold first."; return; }
+  let root; try{ root=await window.showDirectoryPicker({id:"rclc-sd",mode:"readwrite"}); }catch(e){ msg.textContent="Cancelled."; return; }
+  try{ const r=await writePack(root,t=>msg.textContent=t);
+    msg.textContent="Saved \""+r.name+"\" ("+r.n+" files)"+(r.backup?". Old pack kept as packs/"+r.backup:"")+". Put the card in the truck and power up."; }
+  catch(e){ console.warn(e); msg.textContent="Couldn't write to the card: "+e.message+". Is it the card, and not locked?"; }
+});
+document.getElementById("ename").addEventListener("input",writeManifest);
+
+// ---------------------------------------------------------------- audio graph (same model as the board)
+let ctx=null, master, popGain, popOsc, popDepth, analyser;
+function ensureCtx(){
+  if(ctx){ctx.resume();return;}
+  ctx=new (window.AudioContext||window.webkitAudioContext)({sampleRate:SR});
+  master=ctx.createGain(); master.gain.value=+document.getElementById("vol").value;
+  popGain=ctx.createGain(); analyser=ctx.createAnalyser(); analyser.fftSize=2048;
+  popGain.connect(master); master.connect(analyser); analyser.connect(ctx.destination);
+  const N=48,re=new Float32Array(N+1),im=new Float32Array(N+1),M=2048;
+  for(let k=1;k<=N;k++){let a=0,b=0;for(let j=0;j<M;j++){const ph=j/M,v=(1-ph)*(1-ph);a+=v*Math.cos(2*Math.PI*k*ph);b+=v*Math.sin(2*Math.PI*k*ph);}re[k]=2*a/M;im[k]=2*b/M;}
+  popOsc=ctx.createOscillator(); popOsc.setPeriodicWave(ctx.createPeriodicWave(re,im,{disableNormalization:true}));
+  popDepth=ctx.createGain(); popDepth.gain.value=0; popOsc.connect(popDepth); popDepth.connect(popGain.gain); popOsc.start();
+  files.forEach(attach);
+}
+const isLoop=r=>r==="eng"||r==="coast"||r==="jake";
+function attach(f){ if(!ctx||!isLoop(f.role)||f.src) return;
+  f.src=ctx.createBufferSource(); f.src.buffer=f.buf; f.src.loop=true; f.g=ctx.createGain(); f.g.gain.value=0; f.src.connect(f.g); f.g.connect(popGain); f.src.start(); }
+function detach(f){ if(f.src){ try{f.src.stop()}catch(e){} f.src.disconnect(); f.g.disconnect(); f.src=null; f.g=null; } }
+function playBuf(buf){ ensureCtx(); const s=ctx.createBufferSource(); s.buffer=buf; s.connect(master); s.start(); return s; }
+function shot(role){ const f=files.find(x=>x.role===role); return f?playBuf(f.buf):null; }
+function rebuildFiles(){
+  files.forEach(detach);
+  if(mode==="c15"&&c15Files){ files=c15Files.slice(); }
+  else { files=[]; ROWS.forEach(R=>grid[R.key].forEach(c=>{ if(c&&c.buf) files.push({role:R.role,rpm:c.rpm,buf:c.buf,cell:c}); }));
+         extras.filter(x=>x.role!=="ignore").forEach(x=>files.push({role:x.role,rpm:x.rpm,buf:x.buf})); }
+  files.forEach(f=>{f.src=null;}); files.forEach(attach);
+}
+function ladder(role,rpm){
+  const L=files.filter(f=>f.role===role&&f.rpm>0).sort((a,b)=>a.rpm-b.rpm), out=new Map(); if(!L.length) return out;
+  if(L.length===1||rpm<=L[0].rpm){out.set(L[0],1);return out;} if(rpm>=L[L.length-1].rpm){out.set(L[L.length-1],1);return out;}
+  for(let i=0;i<L.length-1;i++) if(rpm>=L[i].rpm&&rpm<L[i+1].rpm){const t=(rpm-L[i].rpm)/(L[i+1].rpm-L[i].rpm);out.set(L[i],1-t);out.set(L[i+1],t);break;}
+  return out;
+}
+const pinc=(rpm,f)=>Math.min(2.1,Math.max(0.5,rpm/f.rpm));
+
+// ---------------------------------------------------------------- the C15 reference (published next to this page)
+const C15=[["eng650.wav","eng",601],["eng800.wav","eng",866],["eng1000.wav","eng",980],["eng1100.wav","eng",1063],["eng1500.wav","eng",1508],["eng1700.wav","eng",1584],["eng2000.wav","eng",2009],
+  ["exh650.wav","coast",701],["exh1000.wav","coast",1014],["exh1300.wav","coast",1335],["exh1500.wav","coast",1585],["exh1800.wav","coast",1902],
+  ["jake.wav","jake",1697],["horn.wav","horn"],["airbrake1.wav","air"],["start.wav","start"],["stop.wav","stop"]];
+async function loadC15(){ if(c15Files) return true;
+  try{ c15Files=await Promise.all(C15.map(async([n,role,rpm])=>{const r=await fetch("c15/"+n); if(!r.ok) throw new Error(n); return {role,rpm:rpm||0,buf:await decoder.decodeAudioData(await r.arrayBuffer())};})); return true; }
+  catch(e){ console.warn("C15 not available here",e); return false; } }
+function setMode(m){ mode=m; document.getElementById("useMine").classList.toggle("on",m==="mine"); document.getElementById("useC15").classList.toggle("on",m==="c15"); rebuildFiles(); }
+document.getElementById("useMine").addEventListener("click",()=>setMode("mine"));
+document.getElementById("useC15").addEventListener("click",async()=>{ ensureCtx(); if(await loadC15()) setMode("c15"); });
+
+// ---------------------------------------------------------------- sim
+let last=performance.now(), engRun=0, mAvg=-60; const mbuf=new Float32Array(2048);
+function tick(now){
+  const dt=Math.min(0.05,(now-last)/1000); last=now;
+  const want=(S.held||S.blip>0)?1:0; S.blip=Math.max(0,S.blip-dt); S.thr+=(want-S.thr)*Math.min(1,dt*8); let thr=S.thr;
+  if(S.on){
+    if(S.drive){
+      if(S.cut>0){S.cut-=dt;thr=0;S.rpm+=(S.target-S.rpm)*Math.min(1,dt*6);}
+      else{ S.rpm+=(thr>0.05?(420-S.gear*26)*thr:-260-(S.jake?520:0))*dt;
+        if(thr>0.05&&S.rpm>1950&&S.gear<10){S.gear++;S.target=S.rpm*0.8;S.cut=0.35;}
+        if(thr<=0.05&&S.rpm<1150&&S.gear>1){S.gear--;S.rpm*=1.22;} }
+      S.rpm=Math.max(S.idle,Math.min(S.gov,S.rpm));
+    } else { const t=S.idle+thr*(S.gov-S.idle); S.rpm+=(t-S.rpm)*Math.min(1,dt*(t>S.rpm?2.6:1.3)); }
+  } else { S.rpm+=(0-S.rpm)*Math.min(1,dt*2.5); if(S.rpm<5)S.rpm=0; }
+  if(ctx){
+    const t=ctx.currentTime, run=S.on&&!S.starting;
+    engRun+=((run?1:0)-engRun)*Math.min(1,dt*(run?3:1.5));
+    const jakeLive=S.jake&&run&&thr<0.05&&S.rpm>900, duck=jakeLive?0.35:1, work=Math.min(1,thr+(S.drive?0.25:0));
+    const E=ladder("eng",S.rpm), C=ladder("coast",S.rpm), J=ladder("jake",S.rpm), hasEng=E.size>0, hasExh=C.size>0;
+    files.forEach(f=>{ if(!f.src) return; let g=0;
+      if(f.role==="eng"&&E.has(f)) g=E.get(f)*(hasExh?0.55:1)*duck;
+      if(f.role==="coast"&&C.has(f)) g=C.get(f)*(hasEng?0.85:1)*duck;
+      if(f.role==="jake"&&J.has(f)&&jakeLive) g=J.get(f);
+      g*=engRun; const solo=f.cell&&f.cell.solo; if(solo) g=0.9; else if(files.some(x=>x.cell&&x.cell.solo)) g=0;
+      f.g.gain.setTargetAtTime(g,t,0.02); f.src.playbackRate.setTargetAtTime(solo||!f.rpm?1:pinc(Math.max(S.rpm,1),f),t,0.02); });
+    const D=(document.getElementById("popOn").checked&&engRun>0.01)?0.55*(0.45+0.55*work):0;
+    popOsc.frequency.setTargetAtTime(Math.max(1,S.rpm*0.05),t,0.02); popDepth.gain.setTargetAtTime(D,t,0.02); popGain.gain.setTargetAtTime(1-D+D/3,t,0.02);
+    analyser.getFloatTimeDomainData(mbuf); let s=0; for(const v of mbuf) s+=v*v;
+    const vol=+document.getElementById("vol").value||1e-6; mAvg+=(20*Math.log10(Math.sqrt(s/mbuf.length)/vol+1e-9)-mAvg)*0.05;
+    const L=document.getElementById("light"), T=document.getElementById("lightTxt");
+    if(engRun<0.05){L.className="light";T.textContent="Start the engine to check the volume";}
+    else if(mAvg>C15_MIX_DB+1){L.className="light bad";T.textContent="Louder than the C15 - the final pack will be turned down";}
+    else if(mAvg>C15_MIX_DB-1){L.className="light warn";T.textContent="As loud as the C15";}
+    else {L.className="light ok";T.textContent="Speaker safe";}
+  }
+  document.getElementById("rRpm").textContent=Math.round(S.rpm);
+  document.getElementById("rGear").textContent=S.on?(S.drive?(S.gear||1):"N"):"off";
+  document.getElementById("pedalBar").style.width=(S.thr*100).toFixed(0)+"%";
+  document.getElementById("pedal").setAttribute("aria-valuenow",Math.round(S.thr*100));
+  drawTach(); requestAnimationFrame(tick);
+}
+const tc=document.getElementById("tach"), tx=tc.getContext("2d"), css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function drawTach(){
+  const W=tc.width,H=tc.height,cx=W/2,cy=H*0.86,R=Math.min(W*0.42,H*0.74); tx.clearRect(0,0,W,H);
+  const a0=Math.PI,a1=Math.PI*2,maxR=2400,ang=r=>a0+(a1-a0)*Math.min(1,r/maxR);
+  tx.lineCap="butt"; tx.lineWidth=18; tx.strokeStyle=css("--soft"); tx.beginPath(); tx.arc(cx,cy,R,a0,a1); tx.stroke();
+  tx.strokeStyle=css("--bad"); tx.beginPath(); tx.arc(cx,cy,R,ang(S.gov),a1); tx.stroke();
+  tx.strokeStyle=css("--accent"); tx.globalAlpha=.35; tx.beginPath(); tx.arc(cx,cy,R,a0,ang(S.rpm)); tx.stroke(); tx.globalAlpha=1;
+  tx.fillStyle=css("--dim"); tx.font="600 24px "+css("--mono"); tx.textAlign="center"; tx.textBaseline="middle";
+  for(let r=0;r<=maxR;r+=400){const a=ang(r); tx.fillText(r/100,cx+Math.cos(a)*(R+34),cy+Math.sin(a)*(R+34));}
+  files.filter(f=>(f.role==="coast"||f.role==="eng")&&f.rpm>0).forEach(f=>{const a=ang(f.rpm), rr=f.role==="eng"?R-24:R-40;
+    tx.fillStyle=css(f.role==="eng"?"--accent":"--ok"); tx.beginPath(); tx.arc(cx+Math.cos(a)*rr,cy+Math.sin(a)*rr,6,0,7); tx.fill();});
+  const a=ang(S.rpm); tx.strokeStyle=css("--fg"); tx.lineWidth=6; tx.lineCap="round"; tx.beginPath(); tx.moveTo(cx,cy); tx.lineTo(cx+Math.cos(a)*(R-10),cy+Math.sin(a)*(R-10)); tx.stroke();
+  tx.fillStyle=css("--fg"); tx.beginPath(); tx.arc(cx,cy,12,0,7); tx.fill();
+  tx.fillStyle=css("--dim"); tx.font="500 17px "+css("--body"); tx.fillText("x100 rpm  ·  orange = engine holds  ·  green = exhaust",cx,H-12);
+}
+
+// ---------------------------------------------------------------- controls
+function setStart(){const b=document.getElementById("bEngine"); b.textContent=S.on?"Stop":"Start"; b.classList.toggle("on",S.on);}
+document.getElementById("bEngine").addEventListener("click",()=>{ ensureCtx();
+  if(!S.on){ if(!files.some(f=>f.role==="eng"||f.role==="coast")){ document.getElementById("lightTxt").textContent="Load a hold first (or pick the C15 above)"; return; }
+    S.on=true;S.starting=true;S.rpm=150;S.gear=S.drive?1:0; const st=shot("start"), w=st?Math.min(2.2,st.buffer.duration*0.8):0.6; setTimeout(()=>{S.starting=false;S.rpm=S.idle;},w*1000);}
+  else{S.on=false;shot("stop");} setStart(); });
+const tog=(id,key,after)=>document.getElementById(id).addEventListener("click",e=>{S[key]=!S[key];e.currentTarget.classList.toggle("on",S[key]);e.currentTarget.setAttribute("aria-pressed",S[key]);after&&after();});
+tog("bDrive","drive",()=>{S.gear=S.drive?1:0;}); tog("bJake","jake");
+document.getElementById("bBlip").addEventListener("click",()=>{ensureCtx();S.blip=0.45;});
+document.getElementById("bAir").addEventListener("click",()=>{ensureCtx();shot("air");});
+let hornV=null; const horn=document.getElementById("bHorn");
+horn.addEventListener("pointerdown",e=>{e.preventDefault();ensureCtx(); if(hornV)return; const f=files.find(x=>x.role==="horn"); if(!f)return;
+  const s=ctx.createBufferSource(),g=ctx.createGain(); s.buffer=f.buf; s.loop=true; s.connect(g); g.connect(master); s.start(); hornV={s,g}; horn.classList.add("on");});
+["pointerup","pointerleave","pointercancel"].forEach(ev=>horn.addEventListener(ev,()=>{ if(!hornV)return; hornV.g.gain.setTargetAtTime(0,ctx.currentTime,0.03); const v=hornV; setTimeout(()=>{try{v.s.stop()}catch(e){}},200); hornV=null; horn.classList.remove("on");}));
+const pedal=document.getElementById("pedal"), pt=document.getElementById("pedalTxt");
+const gasOn=e=>{e.preventDefault();ensureCtx();S.held=true;pt.textContent="GAS";}, gasOff=()=>{S.held=false;pt.textContent="HOLD FOR GAS";};
+pedal.addEventListener("pointerdown",gasOn); ["pointerup","pointerleave","pointercancel"].forEach(ev=>pedal.addEventListener(ev,gasOff));
+pedal.addEventListener("keydown",e=>{if(e.key===" "||e.key==="ArrowUp")gasOn(e);}); pedal.addEventListener("keyup",e=>{if(e.key===" "||e.key==="ArrowUp")gasOff();});
+document.getElementById("vol").addEventListener("input",e=>{if(master)master.gain.value=+e.target.value;});
+
+renderGrid(); renderExtras(); requestAnimationFrame(tick);
+</script>
