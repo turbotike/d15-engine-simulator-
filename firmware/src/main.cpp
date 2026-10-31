@@ -181,7 +181,6 @@ static void benchKeys() {
                 if (!strcmp(tok, "inj"))       { Engine.grantPart(4, (uint8_t)constrain(atoi(eq + 1), 0, 2)); EEPROM.commit(); continue; }
                 if (!strcmp(tok, "tim0"))      { Engine.timMap[0] = constrain((float)atof(eq + 1), -5.0f, 10.0f); continue; }
                 if (!strcmp(tok, "tim1"))      { Engine.timMap[1] = constrain((float)atof(eq + 1), -5.0f, 10.0f); continue; }
-                if (!strcmp(tok, "lopeforce")) { Engine.lopeForce = atoi(eq + 1) != 0; continue; }
                 // part-table calibration: ff=a,b,c (flow) wgmul= tm= tc= ic= fc= rod= melt=  (NOT "wg" - that is the wastegate)
                 {
                     extern float PT_FFLOW[3], PT_WGMUL[3], PT_TMULT[3], PT_TCEIL[3], PT_ICEFF[3], PT_FCAP[3], PT_RODBAR[3], PT_MELTF[3];
@@ -230,8 +229,8 @@ static void benchKeys() {
                 if (!strcmp(tok, "hill"))      { Tilt.hill = constrain((float)atof(eq + 1), 0.0f, 1.0f); Tilt.save(); Tilt.print(); continue; }
                 if (!strcmp(tok, "prof")) { extern void renderProfPrint(); renderProfPrint(); continue; }
                 if (!strcmp(tok, "state")) {
-                    Serial.printf("[eng] wg=%.0f fuelOn=%.2f inj=%u tim0=%.2f tim1=%.2f lopeforce=%d mess=%.2f pulse=%.2f\n",
-                                  Engine.boostMax, Engine.fuelOnK(), Engine.parts.fuel, Engine.timMap[0], Engine.timMap[1], (int)Engine.lopeForce,
+                    Serial.printf("[eng] gph=%.1f wg=%.0f fuelOn=%.2f inj=%u tim0=%.2f tim1=%.2f lopeforce=%d mess=%.2f pulse=%.2f\n",
+                                  Engine.fuelGph(), Engine.boostMax, Engine.fuelOnK(), Engine.parts.fuel, Engine.timMap[0], Engine.timMap[1], (int)Engine.lopeForce,
                                   Engine.lopeMess(), Engine.pulseLopeAmt());
                     continue;
                 }
@@ -242,7 +241,6 @@ static void benchKeys() {
         }
         case 'q': g_crankTraceUntil = millis() + 6000; if (!engineOn) { engineOn = true; Engine.start(); } break;
         case 'R': g_rpmTraceUntil = millis() + 7000; break;   // 20 Hz rpm trace for 7 s (rev-feel tuning)
-        case 'U': Engine.lopeForce = !Engine.lopeForce; Serial.printf("[lope] force %d\n", (int)Engine.lopeForce); break;
         case 'X': Cfg.hydIn[0] = (Cfg.hydIn[0] == 1.0f) ? 4.0f : 1.0f; break;   // Fn 1: throttle stick <-> RX CH2
         case 'K': Cfg.hydMode = (float)(((int)Cfg.hydMode + 1) % 3); Serial.printf("[hyd] mode %d\n", (int)Cfg.hydMode); break;
         case 'L': Serial.printf("[trailer] %s  lights %u  jake %u  beacon %d  lope %d\n",
@@ -601,6 +599,9 @@ void setup() {
     lopeLoad();              // the pulse lope shaped on tools/lope_designer.html
 
     Engine.begin();
+    {   Preferences p; p.begin("fuel", true);                    // the tank as you left it
+        float g = p.getFloat("gal", -1.0f); p.end();
+        if (g >= 0) Engine.setFuelGal(g); }
     Engine.loadParts();
     // Air tanks come back where they were parked. There is no RTC on this board,
     // so we cannot know how long it actually sat - pass 0 and let the tanks hold
@@ -693,11 +694,18 @@ void loop() {
     // truck kept hauling whatever it booted with until a power cycle.
     // ---- web page buttons (Remote Buttons card) ----
     if (WebCtl.lightNext) { WebCtl.lightNext = false; g_webLight = (g_webLight + 1) % 5; }
-    if (WebCtl.jakeCycle) { WebCtl.jakeCycle = false; g_webJake  = (g_webJake + 1) % 3; }
-    {   // the RC jake switch and the page's latch: whichever asks for more
-        float wj = g_webJake == 2 ? 1.0f : (g_webJake == 1 ? 0.55f : 0.0f);
-        if (wj > jakeAmt) jakeAmt = wj;
-        WebCtl.jakeNow = jakeAmt > 0.8f ? 2 : (jakeAmt > 0.01f ? 1 : 0);
+    {   // THE JAKE: ON/OFF, LAST CHANGE WINS. It was "whichever asks for more"
+        // with a 3-step page button (off/LO/HI), so the page could never turn
+        // off a jake the radio switch held on, and a second tap went to HI
+        // instead of off (Mat: "the jake button does not turn the jake off").
+        // Now flipping the radio switch sets it, tapping the page toggles it.
+        static float rcPrev = -1.0f; static bool jakeOn = false;
+        if (rcPrev < 0.0f) rcPrev = jakeAmt;                    // first pass: no edge
+        if (jakeAmt != rcPrev) { jakeOn = jakeAmt > 0.5f; rcPrev = jakeAmt; }   // the radio switch moved
+        if (WebCtl.jakeCycle) { WebCtl.jakeCycle = false; jakeOn = !jakeOn; }  // the page button
+        jakeAmt = jakeOn ? 1.0f : 0.0f;
+        g_webJake = jakeOn ? 2 : 0;
+        WebCtl.jakeNow = jakeOn ? 2 : 0;
     }
 
     // ---- WORK MODE (hydraulics on the servo outputs) ----
@@ -1085,14 +1093,21 @@ void loop() {
         BattState bs = Batt.state();
         if (bs == BATT_EMPTY && prevBs != BATT_EMPTY) EngAudio.playDanger();
         prevBs = bs; }
-    if (Batt.active()) {
-        // gauge follows the pack; keep a sliver in the tank until the cutoff so
-        // the sim's own 'ran dry -> stop()' only fires at the END of the starve
-        float f = Batt.soc();
-        if (Batt.state() == BATT_EMPTY) f = (Batt.starve() >= 1.0f) ? 0.0f : 0.01f;
-        else f = fmaxf(f, 0.02f);
-        Engine.setFuelFrac(f);
-    }
+    // THE FUEL GAUGE IS THE REAL TANK (Mat 2026-10-31). The battery only protects
+    // the pack: at its cut-off the engine starves and stops (setStarve below),
+    // but it no longer drives the gauge. The tank empties by what the injectors
+    // spray, and REFUEL fills it. Saved so it survives a power cycle: on every
+    // shutdown and refuel, and every 3 minutes while running (flash writes are
+    // kept rare - each one briefly stalls the audio cache).
+    {   static bool wasRun = false; static uint32_t lastSave = 0; static float lastGal = -1;
+        bool run = Engine.running(); float gal = Engine.fuelGal();
+        bool refuelled = lastGal >= 0 && gal > lastGal + 1.0f;
+        if ((wasRun && !run) || refuelled || (run && millis() - lastSave > 180000 && fabsf(gal - lastGal) > 0.5f)) {
+            Preferences p; p.begin("fuel", false); p.putFloat("gal", gal); p.end();
+            lastSave = millis(); lastGal = gal;
+        }
+        if (lastGal < 0) lastGal = gal;
+        wasRun = run; }
     Engine.setStarve(Batt.starve());
     Servos.poll();
     pedalTrace();

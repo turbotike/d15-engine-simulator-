@@ -436,7 +436,6 @@ input[type=range]::-moz-range-thumb{width:30px;height:30px;border-radius:50%;bac
       onmouseleave="sendCmd('HORN_OFF');this.classList.remove('active')">&#x1F4EF; HORN</div>
     <div class="rbtn lights" onclick="sendCmd('LIGHT_NEXT')">&#x1F4A1; LIGHTS</div>
     <div class="rbtn engine" onclick="sendCmd('ENGINE_TOGGLE')">&#x1F511; ENGINE</div>
-    <div class="rbtn lope" id="lopeBtn" onclick="toggleLope()">&#x1F3CE; LOPE IDLE</div>
     <div class="rbtn lights" onclick="sendCmd('REFUEL');toast('Tanks filled')">&#x26FD; REFUEL</div>
     <div class="rbtn engine" id="btnJake" onclick="sendCmd('JAKE_CYCLE')">&#x2699; JAKE</div>
    </div>
@@ -597,16 +596,17 @@ const sections = [
  { id:'enginesim', icon:'&#x1F69B;', title:'Simulated Engine & Load', settings:[
    {key:'trailerLoad',label:'Trailer Load',min:0,max:3,step:1,desc:'What the truck is hauling. Heavier loads pull slower, lug harder and rev higher through the gears.'},
    {key:'fullStopTime',label:'Full Stop Time',min:0,max:3,step:0.1,unit:' s',desc:'How many seconds FULL brakes take to stop the truck from the speed it was doing. 0 = instant stop. Lighter braking adds up to 2 s so a dab is never a slam. The clutch goes in below 10 mph so the engine drops to idle.'},
-   {key:'throttleExpo',label:'Throttle Expo',min:0,max:100,step:5,unit:'%',desc:'Softens the low end of a spring-center trigger so light pulls give fine throttle control (and it will not rev away). 0 = linear, 100 = full cubic.'}
+   {key:'throttleExpo',label:'Throttle Expo',min:0,max:100,step:5,unit:'%',desc:'Softens the low end of a spring-center trigger so light pulls give fine throttle control (and it will not rev away). 0 = linear, 100 = full cubic.'},
+   {key:'fuelScale',label:'Fuel Burn Rate',min:1,max:50,step:1,unit:'x',desc:'How fast the tanks drain, times real time. 1x is real: a 120 gal tank lasts hours. At 10x a stock truck flat out empties it in about half an hour, big plungers in about six minutes. Run it dry and it sputters and dies - hit REFUEL.'}
  ,
  ], toggles:[
    
  ]},
 
- { id:'battery', icon:'&#x1F50B;', title:'Battery (Pack = Fuel)', settings:[
+ { id:'battery', icon:'&#x1F50B;', title:'Battery', settings:[
    {key:'battTrim',label:'Pack Voltage Calibration',min:0.85,max:1.15,step:0.005,desc:'Measure the pack with a meter, then nudge this until the PACK reading in the header matches. Do it once - it stays saved.'}
  ], toggles:[
-   {key:'battProtect',label:'Battery Protection',desc:'The fuel gauge follows your real pack. At 3.3 V per cell the engine sputters, runs dry and dies, the truck coasts to a stop and the hazards come on - protecting the LiPo. Only active with the ESC on (its BEC powers the sense), never on USB alone.'}
+   {key:'battProtect',label:'Battery Protection',desc:'Protects your LiPo. At 3.3 V per cell the engine sputters and dies, the truck coasts to a stop and the hazards come on; it will not restart until a fresh pack goes in. (The fuel gauge is the diesel tank in the truck - REFUEL fills it.) Only active with the ESC on (its BEC powers the sense), never on USB alone.'}
  ]},
  { id:'tune', icon:'&#x1F527;', title:'Engine Tuning', settings:[
    {key:'boostMax',label:'Wastegate Spring',min:28,max:60,step:1,unit:'psi',group:'Air System',desc:'Boost ceiling. More boost = more AIR = supports more fuel. But fuel without air just makes heat, and big cylinder pressure with hot timing breaks parts. Balance it.'},
@@ -709,7 +709,6 @@ function onSlider(key,val){currentValues[key]=parseFloat(val);var s=findSetting(
 function onToggle(key,ck){q('/set?key='+key+'&val='+(ck?1:0)).catch(function(){});}
 function toggleSection(id){var el=document.getElementById('sec_'+id);if(el)el.classList.toggle('collapsed');}
 function sendCmd(a){q('/cmd?action='+a).catch(function(){});}
-function toggleLope(){var b=document.getElementById('lopeBtn');var on=b.classList.toggle('active');q('/cmd?action='+(on?'LOPE_ON':'LOPE_OFF')).catch(function(){});}
 // ---- wireless trailer ----
 function trSet(qs){q('/trailer?'+qs).then(function(r){return r.json();}).then(function(j){trShow(j);if(!j.err)toast('Trailer saved');}).catch(function(){toast('No answer from the truck');});}
 function trShow(j){if(!j)return;var c=document.getElementById('tg_trOn');if(c)c.checked=!!j.on;
@@ -1317,7 +1316,7 @@ function updateDashboard(){if(window._dashBusy)return;window._dashBusy=1;q('/sta
   function lamp(id,on){var e=document.getElementById(id);if(e)e.classList.toggle('on',!!on);}
   lamp('w_air',w&1);lamp('w_park',w&2);lamp('w_hot',w&4);lamp('w_fan',w&8);lamp('w_derate',w&16);lamp('w_dmg',w&32);
  }
- var bj=document.getElementById('btnJake');if(bj){bj.classList.toggle('active',d.jake>0);bj.innerHTML='&#x2699; JAKE'+(d.jake==1?' LO':(d.jake==2?' HI':''));}
+ var bj=document.getElementById('btnJake');if(bj){bj.classList.toggle('active',d.jake>0);bj.innerHTML='&#x2699; JAKE'+(d.jake>0?' ON':' OFF');}
  document.getElementById('ds_thr').textContent=Math.min(100,Math.max(0,Math.round((d.throttle-1470)/5)))+'%';
  var motorPct=Math.min(100,Math.max(0,Math.round(Math.abs(d.motor-1470)/5)));
  document.getElementById('ds_motor').textContent=motorPct+'%';
@@ -1331,7 +1330,6 @@ function updateDashboard(){if(window._dashBusy)return;window._dashBusy=1;q('/sta
  if(d.gl!==undefined)suGauges(d);
  if(d.tr!==undefined){var tb=document.getElementById('trBadge');
   if(tb){tb.textContent=['OFF','NO ANSWER','LINKED'][d.tr]||'OFF';tb.style.background=d.tr==2?'#37804a':(d.tr==1?'#7a5a12':'');tb.style.color=d.tr?'#fff':'';}}
- if(d.lope!==undefined){var lb=document.getElementById('lopeBtn');if(lb)lb.classList.toggle('active',d.lope==1);}
  if(d.beacon!==undefined){var bb=document.getElementById('beaconBtn');if(bb)bb.classList.toggle('active',d.beacon==1);}
   if(d.hlth!==undefined){window.curEngHealth=d.hlth;var eh=document.getElementById('engHealth');
   if(eh){eh.textContent=Math.round(d.hlth)+'%';

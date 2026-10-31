@@ -41,7 +41,7 @@ no laptop needed after the first flash.
 - [Lights](#lights)
 - [Work mode, hydraulics and the dump truck](#work-mode-hydraulics-and-the-dump-truck)
 - [Wireless trailer](#wireless-trailer)
-- [Battery = fuel](#battery--fuel)
+- [Fuel and the battery](#fuel-and-the-battery)
 - [Sound Studio: make your own engine](#sound-studio-make-your-own-engine)
 - [Building from source](#building-from-source)
 - [Bench / serial commands](#bench--serial-commands)
@@ -113,8 +113,10 @@ no laptop needed after the first flash.
   bed, and a pump sound if your pack has one.
 - **Wireless trailer** over ESP-NOW: lights and landing legs, using the
   DIYGuy999 trailer protocol.
-- **Battery = fuel.** The 2S pack's charge is the fuel gauge. At the cut-off the
-  engine starves, sputters and dies like it ran dry, and the truck coasts down.
+- **A real diesel tank.** The fuel gauge is the truck's own tank. It drains by what
+  the injectors spray, so bigger injectors drink harder. Run it dry and it sputters
+  and dies; hit REFUEL. Separately, the **battery protection** shuts the engine down
+  at the LiPo's cut-off to save your pack.
 - **Receivers:** iBUS, SBUS or PWM, auto-detected. Every function can be remapped
   to any channel.
 - **CONTROL tab:** turn any free channel header into a servo output.
@@ -393,6 +395,11 @@ in on the same tune, a bigger turbo runs more boost off the same wastegate
 setting, and the intercooler keeps that air dense. Rods and pistons decide
 whether it lives. **Big-plunger injectors** bring the lope and the limiter pops.
 
+**Bigger injectors drink.** The tank drains by what the injectors actually
+spray, rich or not: about 1.7 / 2.6 / 3.6 gal/h at idle and 26 / 66 / 132 gal/h
+flat out on 57s / 59s / big plungers, times the Fuel Burn Rate. See
+[Fuel and the battery](#fuel-and-the-battery).
+
 ### The tune
 - **Fuel map**, 8 rpm bands, shown in **mm³ per stroke** through your injectors.
 - **Timing map**, 8 bands, in **°BTDC**. More advance makes more power and
@@ -644,19 +651,29 @@ Set it up under WORK → Wireless Trailer & Buttons.
 
 ---
 
-## Battery = fuel
+## Fuel and the battery
 
+### The diesel tank
+- The **fuel gauge is the truck's own 120-gallon tank**. It drains by the fuel the
+  injectors actually spray, rich or not, so bigger injectors and harder driving burn more.
+- **Fuel Burn Rate** (TUNE → Simulated Engine & Load) speeds that up: 1× is real
+  time, where a tank lasts hours. The default is 10×, so a stock truck flat out
+  empties it in about half an hour and big plungers in about six minutes.
+- Under about **2 gallons** it starts sucking air and sputtering. **Empty and it dies**,
+  and it won't restart until you hit **⛽ REFUEL** (Remote Buttons on the WORK tab).
+- The tank level is **saved**: it's where you left it after a power cycle.
+- **Low fuel** lamp at 1/8 tank.
+
+### Battery protection
 With the ESC connected (the board senses its BEC):
-- The **2S pack's charge is the fuel gauge**, using a real LiPo curve, not linear.
-- **Low fuel** warning near empty.
+- The 2S pack voltage is watched against a real LiPo curve.
 - At the **cut-off (3.3 V per cell)**, held 3 s so a launch sag can't trip it, the
-  engine **starves**: it sputters for a few seconds, then dies like it ran dry.
-  The truck coasts down and the hazards come on. It stays shut down until a
-  fresh pack goes in.
+  engine **starves**: it sputters for a few seconds, then shuts down. The truck coasts
+  to a stop and the hazards come on. It won't restart until a fresh pack goes in.
 - Put a **`danger.wav`** in your pack and it plays once at the cut-off.
 
-Calibrate the pack voltage once against a meter: SETUP → Battery → Pack
-Voltage Calibration. On USB alone the protection is off.
+Calibrate the pack voltage once against a meter: SETUP → Battery → Pack Voltage
+Calibration. On USB alone the protection is off.
 
 ---
 
@@ -719,7 +736,7 @@ pio device monitor            # serial console, 115200
 | `Outputs.*` · `ServoOut.*` | ESC output and the servo-header outputs |
 | `Hydraulics.*` | Work mode |
 | `Trailer.*` | ESP-NOW trailer link |
-| `Battery.*` | Pack monitor and battery = fuel |
+| `Battery.*` | Pack monitor and battery protection |
 | `WebUI.*` · `WebPage.h` | The phone control panel |
 
 ---

@@ -292,7 +292,6 @@ float EngineSim::chopMiss(float dt, float r, float thr) {
     base = fminf(1.8f, base + injectorIdleChop(r, thr) * 0.95f);
     // LOPE IDLE button on the web page: a cammed-up idle on demand, without
     // touching the tune. Same scale as an aggressive timing map (~1.1).
-    if (lopeForce) base = fmaxf(base, 1.1f);
     // THE LOPE CHARACTER FOLLOWS THE WHOLE REV RANGE.
     //
     // This faded to nothing by 1500 rpm - (1500-r)/350 - so the engine lost
@@ -477,6 +476,7 @@ void EngineSim::restore(float savedFuelGal, float savedCoolF, float elapsedMin) 
 
 void EngineSim::start() {
     if (g_health <= 8.0f) return;                                 // melted/seized: rebuild first
+    if (g_starve >= 1.0f) return;                                 // battery cut off: fresh pack first
     if (g_state == ES_OFF) { g_state = ES_CRANK; crankT = 0; g_trigStart = true;
         g_shutMute = 1.0f;                     // undo any previous shutdown mute
         if (g_fuelGal <= 0.05f) { g_state = ES_OFF; return; }     // dry tanks: no start
@@ -799,6 +799,7 @@ void EngineSim::update(float dt, float throttle01, bool inDrive, bool inReverse,
         else { dynoTick(dt); throttle01 = g_dynoThr; inDrive = false; inReverse = false; jakeAmt = 0; brake01 = 0; }
     }
     g_throttle = throttle01; g_drive = inDrive; g_jakeAmt = jakeAmt; g_reverse = inReverse;
+    if (g_rpm > 1050.0f) g_jakeRpmOk = true; else if (g_rpm < 950.0f) g_jakeRpmOk = false;   // Jacobs low-rpm cut-out
     // (No auto jake on descents - Mat 2026-10-31: "no auto jake". The jake is
     // the driver's switch only; downhill the box just holds its gear.)
     // full-stop-time reference: the speed when the driver came onto the brakes
@@ -1031,16 +1032,18 @@ void EngineSim::update(float dt, float throttle01, bool inDrive, bool inReverse,
           // FUEL STARVATION (battery cutoff): drop the fuel in random 60-160 ms
           // gaps, more and longer as starve rises - a diesel sucking air as it
           // runs dry, not a clean switch-off.
-          if (g_starve > 0.0f && running) {
+          // the tank running dry sucks air the same way: from ~2 gal down
+          float starveNow = fmaxf(g_starve, clampf((2.0f - g_fuelGal) / 2.0f, 0, 1));
+          if (starveNow > 0.0f && running) {
               static uint32_t s_gapEnd = 0, s_nextGap = 0;
               uint32_t ms = millis();
               if (ms >= s_nextGap) {
-                  bool cut = (random(1000) / 1000.0f) < (0.25f + 0.6f * g_starve);
+                  bool cut = (random(1000) / 1000.0f) < (0.25f + 0.6f * starveNow);
                   s_gapEnd  = cut ? ms + 60 + random(100) : ms;
                   s_nextGap = ms + 120 + random(160);
               }
               if (ms < s_gapEnd) fuelTgt = 0.0f;
-              else fuelTgt *= (1.0f - 0.5f * g_starve);
+              else fuelTgt *= (1.0f - 0.5f * starveNow);
           }
           float r = (fuelTgt > g_fuelDeliv) ? FUEL_RISE : FUEL_FALL;
           g_fuelDeliv += (fuelTgt - g_fuelDeliv) * min(1.0f, dt * r);
@@ -1149,12 +1152,25 @@ void EngineSim::update(float dt, float throttle01, bool inDrive, bool inReverse,
     float effBrake = g_springOn ? 1.0f : (g_brakeApplied / BRAKE_MAX_PSI);
     if (effBrake > 1) effBrake = 1;
 
-    // ---- fuel system (real burn: BSFC ~0.335 lb/hp-hr, diesel 7.1 lb/gal) ----
+    // ---- fuel system: the tank drains by what the injectors SPRAY ----
+    // It used to burn by horsepower (BSFC), so bigger injectors only drank more
+    // when they made more power - at idle a big-plunger engine sipped like stock.
+    // Now it is the fuel actually injected (EngineCore fuelKgS, 3.18 kg/gal):
+    // 59s and big plungers pour 2.5x / 5x the fuel on the same throttle, rich
+    // or not (Mat: "with the big injectors the fuel goes a lot faster").
     if (running) {
-        float hp = fmaxf(g_lastCore.torqueNm, 0.0f) * g_rpm / 9549.0f / 0.7457f * g_derate;
-        float gph = max(0.9f, hp * 0.335f / 7.1f);       // 0.9 gph idle floor
+        float gph = max(0.6f, g_lastCore.fuelKgS * 3600.0f / 3.18f);   // small floor: never a free idle
+        // Oversized injectors can't meter a small shot (that's the lope) - they
+        // waste fuel at idle and light load even when the governor trims them:
+        // +0.7 gal/h on 59s, +1.8 on big plungers.
+        gph += 0.45f * (PT_FFLOW[parts.fuel > 2 ? 2 : parts.fuel] - 1.0f);
+        g_gph = gph;
         g_fuelGal -= gph * fuelScale * dt / 3600.0f;
-        if (g_fuelGal <= 0) { g_fuelGal = 0; stop(); }   // ran the tanks dry
+        if (g_fuelGal <= 0) { g_fuelGal = 0; stop(); }   // ran the tanks dry: REFUEL to restart
+        // The BATTERY cut-off no longer empties the tank (the fuel gauge is the
+        // real tank now - Mat: "I want a real fuel gauge and you have to refuel
+        // it"), so a finished starve stops the engine itself.
+        if (g_starve >= 1.0f) stop();
     }
 
     // ---- thermal + damage (thermostat @160F, fan clutch, block cooldown) ----

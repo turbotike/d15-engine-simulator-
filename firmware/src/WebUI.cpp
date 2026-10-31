@@ -202,6 +202,7 @@ static Knob KNOBS2[] = {
     { "hydSwitch",          &Cfg.hydSwitch,    0.0f,   17.0f, 1.0f },
     { "volHydPump",         &EngAudio.hydLevel, 0.0f,   2.0f, 1.0f },
     { "fullStopTime",       &Cfg.fullStopTime, 0.0f,    3.0f, 1.0f },
+    { "fuelScale",          &Engine.fuelScale, 1.0f,   50.0f, 1.0f },   // appended 2026-10-31: fuel burn rate x real time
 };
 static const int NKNOB2 = sizeof(KNOBS2) / sizeof(KNOBS2[0]);
 static const int WEB2_EE_ADDR = 300;
@@ -468,8 +469,6 @@ static void hCmd() {
     else if (a == "JAKE_CYCLE") WebCtl.jakeCycle = true;
     else if (a == "BEACON_ON")  WebCtl.beacon = true;
     else if (a == "BEACON_OFF") WebCtl.beacon = false;
-    else if (a == "LOPE_ON")    Engine.lopeForce = true;
-    else if (a == "LOPE_OFF")   Engine.lopeForce = false;
     else if (a == "WORK_TOGGLE") WebCtl.workToggle = true;
     // ---- wireless trailer (DIYGuy protocol, see Trailer.h) ----
     else if (a == "TRAILER_LIGHTS")     Trailer.lightTest();

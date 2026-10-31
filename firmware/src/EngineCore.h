@@ -24,6 +24,7 @@ struct CoreOut {
     float pcpBar;        // peak cylinder pressure estimate
     bool  surge;         // compressor is over the surge line
     float shaftHz;       // wT/60, as the browser defines it (NOT rad/s -> Hz)  (drives the whistle pitch)
+    float fuelKgS;       // fuel actually INJECTED, kg/s (burned or not) - the tank drains by this
 };
 
 class EngineCore {

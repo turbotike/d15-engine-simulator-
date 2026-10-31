@@ -45,6 +45,7 @@ public:
     float    transF()     const { return g_transF; }
     float    volts()      const { return g_volts; }
     float    fuelGal()    const { return g_fuelGal; }
+    float    fuelGph()    const { return g_gph; }
     float    fuelFrac()   const { return g_fuelGal / tankGal; }
     float    health()     const { return g_health; }
 
@@ -286,7 +287,7 @@ public:
 
     // realism tunables (web-adjustable)
     float tankGal   = 120.0f;   // twin 60 gal tanks
-    float fuelScale = 1.0f;     // >1 burns faster than real time (for shorter sessions)
+    float fuelScale = 10.0f;    // FUEL BURN RATE: x real time, so a tank can run dry in an RC session (SETUP slider)
     float turboSpoolUp   = 1.0f;   // 1.0 = stock S410G 4s spool
     float turboSpoolDown = 1.0f;   // 1.0 = stock 1.2s coast-down
     float gradeMax       = 0.0f;   // flat world (rolling-hills feature retired with its slider)
@@ -309,6 +310,7 @@ public:
     float wastegate01() const { return g_tWg; }
 
     void  refuel()            { g_fuelGal = tankGal; }
+    void  setFuelGal(float g)  { g_fuelGal = clampf(g, 0, tankGal); }
     // Battery = fuel (Battery.cpp). The real pack's state of charge drives the tank,
     // and starve (0..1) cuts fuel in random bursts - the engine sputters, then dies.
     void  setFuelFrac(float f) { g_fuelGal = clampf(f, 0, 1) * tankGal; }
@@ -400,16 +402,19 @@ public:
     // --- browser-parity audio drivers ---
     float    barkFactor(float rpm) const;   // exhaust volume from timing (0 stock .. 1 = +10 loud)
     float    lopeAmt()    const;            // lope-idle amount from idle-cell timing
-    bool     lopeForce = false;             // web LOPE IDLE button (EngineSim.cpp chopMiss)
+    bool     lopeForce = false;             // RETIRED (the LOPE IDLE button is gone - big plungers lope); kept for the status field
     float    takeBovAmp() { float a=g_bovAmp; g_bovAmp=0; return a; }  // blow-off pssh on let-off
     // jake is actually barking: armed + in gear + off throttle + rolling + above ~1100
     // Matches the SIM's audio gate exactly: jakeStage && armed && throttle<0.05 && rpm>660.
     // NOT gated on being in gear or moving - the sim barks the jake in neutral too. The
     // TORQUE stays gated on drive (stepCoupled only runs coupled), same as the sim, so it
     // makes the noise without retarding anything that isn't turning.
+    // CUT-OUT BELOW ~1000 rpm like a real Jacobs (it was 660, so it barked at idle -
+    // Mat: "the jake doesn't shut off at idle"). g_jakeRpmOk carries the hysteresis:
+    // on above 1050, off below 950, so it can't flicker at the line.
     bool     jakeEngaged()const { return g_jakeAmt > 0.01f && g_state == ES_RUN &&
                                           g_clutchPedal < 0.5f &&                                     // clutch switch interlock
-                                          g_throttle < 0.05f && g_rpm > 660.0f; }
+                                          g_throttle < 0.05f && g_jakeRpmOk; }
     // jakeEngaged() above is the AUDIO gate and matches the sim - it barks in neutral.
     // This is the "actually retarding the truck" gate: in gear and rolling. Brake lights,
     // the ESC drag brake and anything physical must use THIS one, or the jake sounding
@@ -694,6 +699,7 @@ static const float RAD;
     uint8_t g_chopCyl=0;
     uint32_t g_chopSeq=0; bool g_chopBark=false;
     float g_hunt=0, g_huntPh=0, g_huntHz=1.0f, g_huntSign=1.0f;
+    bool  g_jakeRpmOk=false;               // jake low-rpm cut-out (hysteresis), see jakeEngaged()
     float g_chopDeep=0, g_lopeMess=0, g_lopeWant=0; uint32_t g_lopeStep=0; bool g_chopRhythm=false;
     // Two detuned random walks that make the lope APERIODIC - see the long
     // note in chopMiss(). A competition diesel hunts through its fuel pump;
@@ -718,7 +724,8 @@ static const float RAD;
     float g_airSec=0;                       // secondary tank (fills off primary via check valve)
     float s_airSaved = -999.0f;             // last pressure written to NVS
     // fuel / temps / electrics (CAT C15 6NZ realism pass)
-    float g_fuelGal=120.0f;                 // starts full; persisted via Hours
+    float g_gph=0;                          // live fuel burn, gal/h
+    float g_fuelGal=120.0f;                 // starts full; persisted in NVS "fuel" (main.cpp)
     float g_pyroF=AMBIENT_F;                // EGT pre-turbo
     float g_transF=AMBIENT_F;               // transmission temp
     float g_oilPsi=0, g_volts=12.5f;

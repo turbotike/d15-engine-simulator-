@@ -67,6 +67,7 @@ CoreOut EngineCore::tick(float dt, float rpm, float fuelCmd01, float jake01) {
     float rich    = clampf_((fuelKg - fuelMax) / (fuelMax + 1e-9f), 0, 3.0f);  // fuel past the air
     o.smoke01     = clampf_((fuelKg - burnKg) / (fuelMax + 1e-9f) * 3.0f, 0, 1);
     o.afr         = airPerCyl / (fuelKg + 1e-12f);
+    o.fuelKgS     = fuelKg * (rpm / 120.0f * 6.0f);         // per stroke x six cylinders' firings a second
 
     // ---- combustion: timing sets efficiency and cylinder pressure ----
     float optAdv  = 2.0f + 4.0f * clampf_((rpm - 600.0f) / 1500.0f, 0, 1);
