@@ -1322,9 +1322,9 @@ function updateDashboard(){if(window._dashBusy)return;window._dashBusy=1;q('/sta
   trans:{label:'TRANS',unit:'°F',min:100,max:300,step:50,minor:2,zones:[[250,300,RED]]},
   hydp:{label:'HYD PRESS',unit:'PSI x100',min:0,max:3000,step:1000,scale:100,minor:2,zones:[[2400,3000,RED]]},
   hydt:{label:'HYD TEMP',unit:'°F',min:50,max:300,step:50,minor:2,zones:[[240,300,RED]]},
-  dyno:{label:'DYNO',unit:'HP x100',min:0,max:1200,step:200,scale:100,minor:2,zones:[[1000,1200,RED]],dig:1},
-  dpyro:{label:'PEAK EGT',unit:'°Fx100',min:0,max:1400,step:200,scale:100,minor:2,zones:[[1050,1300,AMBER],[1300,1400,RED]]},
-  dboost:{label:'PEAK BOOST',unit:'PSI',min:0,max:60,step:15,minor:3,zones:[[45,60,RED]]}
+  dyno:{label:'DYNO',unit:'HP x100',min:0,max:3500,step:500,scale:100,minor:5,zones:[[3000,3500,RED]],dig:1},   // parts make up to ~3000 hp
+  dpyro:{label:'PEAK EGT',unit:'°Fx100',min:0,max:2200,step:200,scale:100,minor:2,zones:[[1400,1600,AMBER],[1600,2200,RED]]},   // pistons melt 1600-2000F by tier
+  dboost:{label:'PEAK BOOST',unit:'PSI',min:0,max:120,step:20,minor:4,zones:[[100,120,RED]]}
  };
  function frac(c,v){return Math.max(0,Math.min(1,(v-c.min)/(c.max-c.min)));}
  function ang(f){return A0+f*SW;}
