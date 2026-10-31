@@ -825,8 +825,18 @@ void IRAM_ATTR EngineAudio::render(int16_t *out, size_t frames) {
     }
 
     boost = Engine.turboSpool();
-    float boostPsi = Engine.boostPsi();
-    float turboInc   = clampf((0.8f + boostPsi / 30.0f) * (Pack.turbo.rate / DC_OUT_RATE), 0.5f, 4.2f);
+    // the turbo SOUND runs off boost / shaft speed scaled to the turbo fitted
+    // (EngineSim::soundBoostPsi), so a compound at 120 psi sings in the same range
+    // the stock turbo was tuned in - just deeper (turboTone) and with more air
+    float boostPsi = Engine.soundBoostPsi();
+    const float tTone = Engine.turboTone();
+    // ...and LOUDER WITH REAL BOOST (Mat: "at max boost on the slider the volume
+    // should be different"; "big single louder, compounds loud"): x sqrt(boost/30),
+    // never below 1 (a stock turbo up to 30 psi is exactly as it was), capped 2.2x,
+    // times a little per-turbo character on top.
+    const float tLoud = fminf(2.2f, fmaxf(1.0f, sqrtf(fmaxf(Engine.boostPsi(), 0.0f) / 30.0f)))
+                      * ((tTone > 0.95f) ? 1.0f : (tTone > 0.8f ? 1.15f : 1.3f));
+    float turboInc   = clampf((0.8f + boostPsi / 30.0f) * tTone * (Pack.turbo.rate / DC_OUT_RATE), 0.5f, 4.2f);
     // SAMPLED turbo: gated on how fast boost is MOVING, not on its level.
     //
     // The browser does:
@@ -879,10 +889,10 @@ void IRAM_ATTR EngineAudio::render(int16_t *out, size_t frames) {
         float mk = (bMove > bMoveS) ? 0.14f : 0.45f;
         bMoveS += (bMove - bMoveS) * clampf((float)frames * invSR / mk, 0, 1);
     }
-    float turboSampG = clampf(boost * (0.4f + 0.6f * workLvl), 0, 1) * 1.1f * turboLevel
+    float turboSampG = clampf(boost * (0.4f + 0.6f * workLvl), 0, 1) * 1.1f * turboLevel * tLoud
                      * (0.55f + 0.45f * bMoveS);
     // whistle pitch tracks the SHAFT (keeps singing on lift as it coasts), not boost
-    float shaftHz = Engine.shaftHz();
+    float shaftHz = Engine.soundShaftHz();
     // Rescaled for the corrected shaftHz (was calibrated against a value 9.55x
     // too small). Real shaft Hz: ~160 at the idle floor, ~1700 at stock full
     // boost, ~3500 on a compound. Spanning 160..2800 keeps the whistle sweeping
@@ -913,7 +923,7 @@ void IRAM_ATTR EngineAudio::render(int16_t *out, size_t frames) {
     // (the browser's 900 + 6300*_turbo). An engine brake is a deeper, blattier
     // noise than a spooling turbo - it is the exhaust valve hammering, not the
     // compressor singing - so pull the corner down while the jake is on.
-    float fcA = clampf((900.0f + 6300.0f * turboN) * bend, 200.0f, 7600.0f);
+    float fcA = clampf((900.0f + 6300.0f * turboN) * bend * tTone, 200.0f, 7600.0f);
     float fcB = fminf(fcA * 2, DC_OUT_RATE * 0.45f);
     float rA = 0.988f;
     float c1A = 2 * rA * cosf(2 * (float)M_PI * fcA * invSR);
@@ -979,7 +989,7 @@ void IRAM_ATTR EngineAudio::render(int16_t *out, size_t frames) {
     // gain, this is a direct multiplier on a resonator near full scale. 2.1 keeps
     // the whistle clearly present (it was 1.05 = inaudible) without putting a
     // 4x amplitude on the bus. The A:B ratio stays the browser's 4.2:2.2.
-    float whineAmp = whn * 2.1f * turboLevel * pop;
+    float whineAmp = whn * 2.1f * turboLevel * pop * tLoud;
     // Browser: (0.30*_turbo*(0.3+0.7*_load))*2.7 + _wf*4.0*_pop, with NO ceiling.
     // 1.2/1.6 were 7-8 dB low. _load is the 0.18-smoothed throttle, so workLvl
     // is the right variable here, not the instantaneous loadT.
@@ -998,9 +1008,9 @@ void IRAM_ATTR EngineAudio::render(int16_t *out, size_t frames) {
     // The jake also drives the WHOOSH - the broadband rush of air through the
     // housing, which is most of what reads as 'loud' on a real engine brake.
 
-    float whooshAmp = fminf((0.30f * turboN * (0.3f + 0.7f * workLvl)) * 2.7f
+    float whooshAmp = fminf((0.30f * turboN * (0.3f + 0.7f * workLvl)) * 2.7f * (2.4f - 1.4f * tTone)   // bigger turbo, more air
                             + wf * 1.2f * pop, 1.6f)
-                    * turboLevel * whooshLevel;
+                    * turboLevel * whooshLevel * tLoud;
 
     // Knock resonator Q must match the sim's bandpass (Q=4). At r=0.95 the
     // bandwidth is ~700Hz - broad enough that the noise driving it comes through

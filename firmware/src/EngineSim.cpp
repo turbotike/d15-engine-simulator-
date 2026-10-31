@@ -130,6 +130,10 @@ EngineSim::DynoResult EngineSim::dynoRun() const {
     return res;
 }
 
+float EngineSim::soundBoostPsi() const { return g_boostPsi / PT_WGMUL[parts.turbo > 2 ? 2 : parts.turbo]; }
+float EngineSim::soundShaftHz()  const { return g_shaftHz * (PT_TCEIL[0] / PT_TCEIL[parts.turbo > 2 ? 2 : parts.turbo]); }
+float EngineSim::turboTone()     const { static const float T[3] = {1.0f, 0.85f, 0.72f}; return T[parts.turbo > 2 ? 2 : parts.turbo]; }
+
 float EngineSim::engineTorqueNm() const {
     if (g_state != ES_RUN || g_throttle <= 0.05f) return 0.0f;
     return fmaxf(g_lastCore.torqueNm, 0.0f) * (PEAK_TORQUE / 2508.0f) * g_derate;
@@ -840,7 +844,11 @@ void EngineSim::update(float dt, float throttle01, bool inDrive, bool inReverse,
     // chop used to keep running through the jake, which was the shudder. Fades
     // over ~0.1 s both ways so the lope comes back as the fuel does.
     {
-        bool fuelCut = throttle01 < 0.05f && (jakeEngaged() || g_rpm > idleRpmNow() + 150.0f);
+        // The jake only cuts the fuel where a Jacobs actually works - above ~1000
+        // rpm (it cuts out below that). Before, the jake SWITCH being on at idle
+        // counted as injectors-off, which silenced the big-plunger lope until the
+        // jake was turned off (Mat: "the lope didn't come on till I restarted").
+        bool fuelCut = throttle01 < 0.05f && ((jakeEngaged() && g_rpm > 1000.0f) || g_rpm > idleRpmNow() + 150.0f);
         g_fuelOnK += ((fuelCut ? 0.0f : 1.0f) - g_fuelOnK) * fminf(1.0f, dt * 10.0f);
         g_chopTq *= g_fuelOnK; g_chopD *= g_fuelOnK;
     }

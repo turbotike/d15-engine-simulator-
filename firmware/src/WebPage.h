@@ -1310,7 +1310,7 @@ function updateDashboard(){if(window._dashBusy)return;window._dashBusy=1;q('/sta
  var defs={
   tach:{label:'ENGINE',unit:'RPM x100',min:0,max:2500,step:500,scale:100,minor:5,red:'DIESEL',zones:[[2100,2500,RED]],dig:1},
   speed:{label:'SPEED',unit:'M P H',min:0,max:80,step:10,minor:2,dig:1},
-  boost:{label:'TURBO',unit:'PSI',min:0,max:60,step:15,minor:3,zones:[[45,60,RED]]},
+  boost:{label:'TURBO',unit:'PSI',min:0,max:120,step:20,minor:4,zones:[[100,120,RED]]},   // compound runs ~120
   air:{label:'AIR',unit:'PRI / SEC',min:0,max:150,step:30,minor:3,zones:[[0,60,RED],[60,150,GRN]]},
   water:{label:'WATER',unit:'°F',min:100,max:260,step:20,minor:2,zones:[[100,210,GRN],[230,260,RED]]},
   oilp:{label:'OIL PRESS',unit:'PSI',min:0,max:100,step:20,minor:2,zones:[[0,15,RED],[30,80,GRN]]},

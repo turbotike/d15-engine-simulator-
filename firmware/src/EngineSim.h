@@ -347,6 +347,14 @@ public:
     // the engine's own output torque right now (Nm, 0 off throttle) - in or out
     // of gear, so a blip in neutral rocks the chassis too (Suspension torque twist)
     float    engineTorqueNm() const;
+    // THE TURBO SOUND, SCALED TO THE TURBO FITTED. The bigger turbos run up to 4x
+    // the boost off the same wastegate (and spin to a higher shaft ceiling); fed
+    // raw to the audio they pinned the whistle and screeched (Mat: "the compound
+    // on high boost sounds bad"). These map each turbo back onto the range the
+    // stock one was tuned in. turboTone(): 1 stock, deeper for the bigger ones.
+    float    soundBoostPsi() const;
+    float    soundShaftHz()  const;
+    float    turboTone()     const;
     float    pulseLopeAmt() const { return parts.fuel >= 2 ? 1.0f - g_lopeMess : 0.0f; }
     bool     chopHi()     const { return g_chopHi; }  // top-end bark vs idle lope
 

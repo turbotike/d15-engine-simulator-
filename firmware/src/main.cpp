@@ -221,6 +221,7 @@ static void benchKeys() {
                     continue;
                 }
                 // GY-521: tilt=1 status, tiltlevel=1 (parked flat), tiltaxis=0..3 (+X -X +Y -Y = front), hill=0..1
+                if (!strcmp(tok, "wg"))        { Engine.boostMax = constrain((float)atof(eq + 1), 15.0f, 120.0f); continue; }   // wastegate (bench)
                 if (!strcmp(tok, "danger"))    { if (atoi(eq + 1)) EngAudio.playDanger(); else EngAudio.stopDanger(); continue; }
                 if (!strcmp(tok, "tilt"))      { Tilt.print(); continue; }
                 if (!strcmp(tok, "tiltlevel")) { Tilt.learnLevel(); Tilt.print(); continue; }
@@ -228,8 +229,8 @@ static void benchKeys() {
                 if (!strcmp(tok, "hill"))      { Tilt.hill = constrain((float)atof(eq + 1), 0.0f, 1.0f); Tilt.save(); Tilt.print(); continue; }
                 if (!strcmp(tok, "prof")) { extern void renderProfPrint(); renderProfPrint(); continue; }
                 if (!strcmp(tok, "state")) {
-                    Serial.printf("[eng] inj=%u tim0=%.2f tim1=%.2f lopeforce=%d mess=%.2f pulse=%.2f\n",
-                                  Engine.parts.fuel, Engine.timMap[0], Engine.timMap[1], (int)Engine.lopeForce,
+                    Serial.printf("[eng] wg=%.0f fuelOn=%.2f inj=%u tim0=%.2f tim1=%.2f lopeforce=%d mess=%.2f pulse=%.2f\n",
+                                  Engine.boostMax, Engine.fuelOnK(), Engine.parts.fuel, Engine.timMap[0], Engine.timMap[1], (int)Engine.lopeForce,
                                   Engine.lopeMess(), Engine.pulseLopeAmt());
                     continue;
                 }
