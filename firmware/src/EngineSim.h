@@ -16,7 +16,7 @@ public:
     void update(float dt, float throttle01, bool inDrive, bool inReverse,
                 float jakeAmt, float loadAccel, float brake01);
     void start();   // OFF -> crank -> run
-    void stop();    // run -> shutdown
+    void  stop(const char *why = "cmd");    // run -> shutdown
 
     // ---- published state (audio + outputs read these) ----
     float    rpm()        const { return g_rpm; }
@@ -27,7 +27,15 @@ public:
     // onward. Scale-correct for a 1/14 truck is the trap speed (~136): then
     // the model's 94 ft pass and the virtual quarter end together.
     float    speedFrac()  const {
-        return clampf(g_speed / (g_raceMode ? g_raceEscTopMph : SIM_TOP_MPH), 0, 1);
+        // RACE: full ESC = the truck's GEARED top speed - redline in the top race
+        // gear through the race rear end (~159 mph on the default ladder). The
+        // sim decides how close it gets: power against drag (Mat: "the top speed
+        // should be part of the sim", not a slider).
+        return clampf(g_speed / (g_raceMode ? raceTopMph() : SIM_TOP_MPH), 0, 1);
+    }
+    float    raceTopMph() const {
+        int tg = (g_raceTop >= 1 && g_raceTop <= N_GEARS) ? g_raceTop : N_GEARS;
+        return MAX_RPM / (RPM_PER_MPH_BASE[tg - 1] * RACE_FD_SCALE);
     }
     float    reverseFrac()const { return clampf(g_revSpeed / REV_TOP_MPH, 0, 1); }
     uint8_t  gear()       const { return (uint8_t)g_gear; }

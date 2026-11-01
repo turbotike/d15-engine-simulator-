@@ -508,6 +508,13 @@ TUNE → Race Mode:
 
 Power comes from your parts and tune. Fit the top tier for the 3000 hp class.
 
+**How the real truck goes:** in race mode the ESC follows the sim's speed, and
+**full throttle is the race truck's geared top speed**: redline in your top race
+gear through the race rear end, about 159 mph on the default ladder. A weak build
+never gets there because drag wins; a monster pulls close. Your parts and tune
+decide how hard and how fast the real truck runs. The sim has **no traction limit of its own**:
+the real tyres on your real surface decide whether it hooks or spins.
+
 ---
 
 ## The gyro (GY-521 / MPU-6050)

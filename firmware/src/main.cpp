@@ -1114,8 +1114,8 @@ void loop() {
     pedalTrace();
     {   static uint32_t t = 0;
         if ((int32_t)(g_rpmTraceUntil - millis()) > 0 && millis() - t >= 50) { t = millis();
-            Serial.printf("[rpm] %lu %.0f thr %.2f lope %.2f hunt %+.2f inj %u mess %.2f\n", (unsigned long)millis(), Engine.rpm(), throttle01,
-                          Engine.chopDepth(), Engine.huntNow(), (unsigned)Engine.parts.fuel, Engine.lopeMess()); } }
+            Serial.printf("[rpm] %lu %.0f thr %.2f lope %.2f hunt %+.2f inj %u mess %.2f pedal %.2f mph %.1f g%d\n", (unsigned long)millis(), Engine.rpm(), throttle01,
+                          Engine.chopDepth(), Engine.huntNow(), (unsigned)Engine.parts.fuel, Engine.lopeMess(), Engine.clutchPedalNow(), Engine.speedMph(), Engine.gear()); } }
     heartbeat();
     // Once a second at most, and internally gated so it only spends a flash
     // write when the tank has actually moved 8 psi. Covers yanking the pack

@@ -611,7 +611,6 @@ const sections = [
  { id:'tune', icon:'&#x1F527;', title:'Engine Tuning', settings:[
    {key:'boostMax',label:'Wastegate Spring',min:28,max:60,step:1,unit:'psi',group:'Air System',desc:'Boost ceiling. More boost = more AIR = supports more fuel. But fuel without air just makes heat, and big cylinder pressure with hot timing breaks parts. Balance it.'},
    {key:'clutchRelease',label:'Clutch Release',min:0,max:3,step:0.1,unit:'s',group:'Drag Race',desc:'How long the driver takes to let the clutch out on a launch. 0 dumps it; 1-2 s feeds it in and keeps the launch from bogging.'},
-   {key:'raceEscTop',label:'Race ESC Top Speed',min:65,max:160,step:1,unit:'mph',desc:'Sim speed at which the real truck is flat out in race mode (street is 65). Scale-correct for a 1/14 is the trap speed, ~136. On the driveway: if the truck crosses 94 ft before the sound finishes, raise it; if it is still short when the sound finishes, lower it.'}
  ]},
 ];
 

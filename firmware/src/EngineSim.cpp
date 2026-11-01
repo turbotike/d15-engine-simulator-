@@ -488,7 +488,10 @@ void EngineSim::start() {
         if (g_airPsi < AIR_START) g_airPsi = AIR_START;
         g_brakeApplied = 0; s_peakApplied = 0; g_compLoaded = true; }
 }
-void EngineSim::stop() { if (g_state == ES_CRANK || g_state == ES_RUN) { g_state = ES_STOP; g_trigStop = true; } }
+void EngineSim::stop(const char *why) {
+    if (g_state == ES_CRANK || g_state == ES_RUN) { g_state = ES_STOP; g_trigStop = true;
+        Serial.printf("[engine] stop: %s  rpm %.0f  %.1f mph\n", why, g_rpm, g_speed); }
+}
 
 void EngineSim::meltdown() {                          // piston crown let go - catastrophic
     g_meltEvent = true;                               // violent death (audio)
@@ -533,6 +536,12 @@ float EngineSim::roadDrag(float v_ms, float mass, float brake01) {
 // That is 0.32 g street / 0.57 g race, which is the real ceiling on any
 // launch - a 3000 hp truck leaves on its tyres, not its dyno sheet.
 float EngineSim::tractionN(float mass) const {
+    // NO SIM TRACTION LIMIT (Mat 2026-11-01: "traction should be 100 in the sim
+    // and let real-life traction decide"). The sim truck accelerates on power vs
+    // weight and drag; the real tyres on the real surface spin or hook. The old
+    // per-mode limits are kept below for reference, unused.
+    (void)mass;
+    return 1.0e9f;
     // Race: 0.75 of the weight on the drive axle (a bobtail launching hard
     // transfers nearly everything rearward) on slicks at mu 1.2 - a prepped
     // strip is stickier than mu 1. That is 0.9 g, where a drag truck's 60 ft
@@ -717,6 +726,16 @@ void EngineSim::stepCoupled(float dt, float throttle, float jakeAmt, float brake
             tqSized = fmaxf(tqSized, 2508.0f * C15_SCALE * raceTq * g_derate * DRIVE_EFF);
         float capEff = clampf(tqSized * 0.95f, 3000.0f, 24000.0f) * slipCap
                      * clampf(1.0f - g_clutchHeat*0.6f, 0.30f, 1.0f);   // fades when hot
+        // SIZE THE CLUTCH TO THE ENGINE IT IS BOLTED TO (Mat: "it just hangs at
+        // rpm, it doesn't slowly release"). The race sizing above assumed the
+        // retired power class (~2,600 Nm); a parts-built 4,000 hp engine makes
+        // several times that, so even fully engaged the clutch could not pull
+        // the engine down - it sat on the governor slipping until wheel speed
+        // caught up. Now full capacity is a multiple of what the engine is
+        // making RIGHT NOW: race 2.2x (it starts dragging the revs down about
+        // halfway through the release - the dip and squat of a real launch),
+        // street 1.2x (a big street build doesn't hang either; stock unchanged).
+        if (Teng > 0.0f) capEff = fmaxf(capEff, Teng * (g_raceMode ? 2.2f : 1.2f));
         // A race clutch (multi-disc ceramic) takes slip a street organic
         // plate cannot. At the street rate a 3 s launch slip faded the cap
         // under the engine's limiter torque, so it climbed straight back to
@@ -1170,11 +1189,11 @@ void EngineSim::update(float dt, float throttle01, bool inDrive, bool inReverse,
         gph += 0.45f * (PT_FFLOW[parts.fuel > 2 ? 2 : parts.fuel] - 1.0f);
         g_gph = gph;
         g_fuelGal -= gph * dt / 3600.0f;                 // REAL TIME, straight from the sim - no burn-rate multiplier (Mat)
-        if (g_fuelGal <= 0) { g_fuelGal = 0; stop(); }   // ran the tanks dry: REFUEL to restart
+        if (g_fuelGal <= 0) { g_fuelGal = 0; stop("ran dry"); }   // ran the tanks dry: REFUEL to restart
         // The BATTERY cut-off no longer empties the tank (the fuel gauge is the
         // real tank now - Mat: "I want a real fuel gauge and you have to refuel
         // it"), so a finished starve stops the engine itself.
-        if (g_starve >= 1.0f) stop();
+        if (g_starve >= 1.0f) stop("battery cut-off");
     }
 
     // ---- thermal + damage (thermostat @160F, fan clutch, block cooldown) ----
@@ -1189,7 +1208,7 @@ void EngineSim::update(float dt, float throttle01, bool inDrive, bool inReverse,
         if (g_coolantF > DAMAGE_F) g_health -= (g_coolantF-DAMAGE_F)*0.04f*dt;  // overheat warps
         g_health -= dt * (100.0f / (1000.0f * 3600.0f));         // wear: ~1000 h to a rebuild
         // (EGT no longer drains health gradually - piston melt above is catastrophic instead)
-        if (g_health <= 8.0f && g_state == ES_RUN) stop();       // she's done - spun a bearing
+        if (g_health <= 8.0f && g_state == ES_RUN) stop("health");       // she's done - spun a bearing
         g_health = clampf(g_health, 0, 100);
     } else { g_coolantF += (AMBIENT_F-g_coolantF)*min(1.0f,dt*0.02f); g_fanOn=false; }
 
