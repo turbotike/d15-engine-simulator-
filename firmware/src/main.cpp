@@ -222,6 +222,7 @@ static void benchKeys() {
                 }
                 // GY-521: tilt=1 status, tiltlevel=1 (parked flat), tiltaxis=0..3 (+X -X +Y -Y = front), hill=0..1
                 if (!strcmp(tok, "wg"))        { Engine.boostMax = constrain((float)atof(eq + 1), 15.0f, 120.0f); continue; }   // wastegate (bench)
+                if (!strcmp(tok, "fuelgal"))   { Engine.setFuelGal((float)atof(eq + 1)); continue; }   // bench: set the tank
                 if (!strcmp(tok, "danger"))    { if (atoi(eq + 1)) EngAudio.playDanger(); else EngAudio.stopDanger(); continue; }
                 if (!strcmp(tok, "tilt"))      { Tilt.print(); continue; }
                 if (!strcmp(tok, "tiltlevel")) { Tilt.learnLevel(); Tilt.print(); continue; }

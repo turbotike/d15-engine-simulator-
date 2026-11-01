@@ -145,7 +145,7 @@ bool EngineSim::dynoStart() {
     g_dynoOn = true; g_dynoT = 0; g_dynoRpm = fmaxf(g_rpm, 900.0f); g_dynoThr = 0.25f; g_dynoHpNow = 0;
     for (int i = 0; i < DYNO_PTS; i++) { g_dynoHp[i] = 0; g_dynoTq[i] = 0; }
     g_dynoN = 0; g_dynoPkHp = g_dynoPkRpm = g_dynoPkTq = g_dynoEgt = g_dynoBoost = 0;
-    g_dynoSurge = g_dynoPcp = false; g_dynoRes[0] = 0;
+    g_dynoSurge = g_dynoPcp = g_dynoLowFuel = false; g_dynoRes[0] = 0;
     return true;
 }
 void EngineSim::dynoTick(float dt) {
@@ -172,16 +172,20 @@ void EngineSim::dynoTick(float dt) {
     if (g_boostPsi > g_dynoBoost) g_dynoBoost = g_boostPsi;
     if (g_lastCore.surge && g_dynoT > 1.0f) g_dynoSurge = true;
     if (g_lastCore.pcpBar > g_rodBar) g_dynoPcp = true;
+    if (g_fuelGal < 2.0f) g_dynoLowFuel = true;              // sucking air: the starve zone
     if (g_dynoT >= HOLD + SWEEP) dynoFinish(false);
 }
 void EngineSim::dynoFinish(bool aborted) {
     g_dynoOn = false; g_dynoThr = 0;
     bool blown = (g_state != ES_RUN) && g_health <= 8.0f;    // it died on the rollers
     snprintf(g_dynoRes, sizeof(g_dynoRes),
-             "%.0fhp@%.0frpm;egt=%.0f;boost=%.0f;drt=%d;srg=%d;pcp=%d;bln=%d;hlth=%.0f;tq=%.0f;abt=%d",
+             "%.0fhp@%.0frpm;egt=%.0f;boost=%.0f;drt=%d;srg=%d;pcp=%d;bln=%d;hlth=%.0f;tq=%.0f;abt=%d;dry=%d;bat=%d;lowf=%d",
              g_dynoPkHp, g_dynoPkRpm, g_dynoEgt, g_dynoBoost,
              (g_dynoEgt > 1150.0f && !blown) ? 1 : 0, g_dynoSurge ? 1 : 0,
-             (g_dynoPcp && blown) ? 1 : 0, blown ? 1 : 0, g_health, g_dynoPkTq, aborted ? 1 : 0);
+             (g_dynoPcp && blown) ? 1 : 0, blown ? 1 : 0, g_health, g_dynoPkTq, aborted ? 1 : 0,
+             (!blown && g_fuelGal <= 0.05f) ? 1 : 0,          // ran the tanks dry mid-pull
+             (!blown && g_starve >= 1.0f) ? 1 : 0,            // battery cut-off mid-pull
+             g_dynoLowFuel ? 1 : 0);                          // starved for fuel through it
     Serial.printf("[dyno] live pull: %s\n", g_dynoRes);
 }
 String EngineSim::dynoCurveJson() const {

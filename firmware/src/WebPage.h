@@ -1167,7 +1167,10 @@ function dyResult(res,tgt,live){
  var head='<b style="font-size:1.4rem">'+parts[0].replace('hp@',' hp @ ').replace('rpm',' rpm')+'</b>'+
   (kv.tq?'<div style="font-size:1rem;color:#7ee0ff">'+Math.round(kv.tq)+' lb-ft peak</div>':'');
  var v;
- if(kv.abt)v='ABORTED - partial pull.';
+ if(kv.dry)v='<span style="color:#ff382b">RAN OUT OF FUEL mid-pull - forgot to fill up. Hit REFUEL and go again.</span>';
+ else if(kv.bat)v='<span style="color:#ff382b">BATTERY CUT-OFF mid-pull - the pack is flat. Fresh pack, then go again.</span>';
+ else if(kv.lowf)v='<span style="color:#ff8a1e">SUCKING AIR - low on fuel, it starved through the pull. Hit REFUEL and go again.</span>';
+ else if(kv.abt)v='ABORTED - partial pull.';
  else if(kv.bln){
   if(kv.pcp)v='<span style="color:#ff382b">THREW A ROD - cylinder pressure past what these rods hold. Too much BOOST (and timing) for them: back the wastegate off, or fit stronger rods.</span>';
   else v='<span style="color:#ff382b">MELTED IT DOWN - piston crown let go at '+Math.round(kv.egt)+'\u00b0F. Too much fuel for the air, or the burn too late. More air, a touch more timing, or less fuel.</span>';

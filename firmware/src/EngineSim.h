@@ -744,7 +744,7 @@ static const float RAD;
     bool  g_dynoOn=false; float g_dynoT=0, g_dynoRpm=1000, g_dynoThr=0, g_dynoHpNow=0;
     float g_dynoHp[DYNO_PTS]={0}, g_dynoTq[DYNO_PTS]={0}; int g_dynoN=0;
     float g_dynoPkHp=0, g_dynoPkRpm=0, g_dynoPkTq=0, g_dynoEgt=0, g_dynoBoost=0;
-    bool  g_dynoSurge=false, g_dynoPcp=false;
+    bool  g_dynoSurge=false, g_dynoPcp=false, g_dynoLowFuel=false;
     char  g_dynoRes[200]={0};
     void  dynoTick(float dt);
     void  dynoFinish(bool aborted);     // thermal / mechanical death
