@@ -3,6 +3,7 @@
 // =============================================================================
 #include "Outputs.h"
 #include "Config.h"
+#include "Settings.h"
 
 Outputs Out;
 
@@ -49,7 +50,8 @@ void Outputs::begin() {
 void Outputs::drive(float fwdFrac, float revFrac, bool reverse, float brake01) {
     float target;
     if (reverse) {
-        target = NEUTRAL - (FWD_FLOOR + revFrac * REV_SPAN);    // below neutral = reverse
+        // REV_SPAN x the Reverse Top Speed slider (Mat: "lower the reverse max speed and give me a slider")
+        target = NEUTRAL - (FWD_FLOOR + revFrac * REV_SPAN * constrain(Cfg.revSpeed, 10.0f, 100.0f) / 100.0f);    // below neutral = reverse
     }
     else if (fwdFrac > 0.002f) {
         target = NEUTRAL + FWD_FLOOR + fwdFrac * FWD_SPAN;

@@ -257,10 +257,10 @@ static void benchKeys() {
                   break;
         case 'H': Serial.printf("[health] %.1f%%  melt %.3f  fuel %.1f gal (%.0f%%)  coolant %.0fF  -> %s\n",
                                 Engine.health(), Engine.pistonMelt(),
-                                Engine.fuelFrac() * Engine.tankGal, Engine.fuelFrac() * 100.0f,
+                                Engine.fuelGal(), Engine.fuelFrac() * 100.0f,
                                 Engine.coolantF(),
                                 Engine.health() <= 8.0f ? "WILL NOT START: rebuild (Z)"
-                              : Engine.fuelFrac() * Engine.tankGal <= 0.05f ? "WILL NOT START: dry tanks (Z)"
+                              : Engine.fuelGal() <= 0.05f ? "WILL NOT START: dry tanks (Z)"
                               : "ok to start");
                   break;
         // 'D' = DYNO SWEEP. The 'M' max-slider map (fuel 1.60, +8 everywhere)
@@ -600,8 +600,9 @@ void setup() {
 
     Engine.begin();
     {   Preferences p; p.begin("fuel", true);                    // the tank as you left it
-        float g = p.getFloat("gal", -1.0f); p.end();
-        if (g >= 0) Engine.setFuelGal(g); }
+        float g = p.getFloat("gal", -1.0f), rc = p.getFloat("race", -1.0f); p.end();
+        if (g >= 0) Engine.setFuelGal(g);
+        if (rc >= 0) Engine.setRaceFuelGal(rc); }
     Engine.loadParts();
     // Air tanks come back where they were parked. There is no RTC on this board,
     // so we cannot know how long it actually sat - pass 0 and let the tanks hold
@@ -1100,10 +1101,10 @@ void loop() {
     // shutdown and refuel, and every 3 minutes while running (flash writes are
     // kept rare - each one briefly stalls the audio cache).
     {   static bool wasRun = false; static uint32_t lastSave = 0; static float lastGal = -1;
-        bool run = Engine.running(); float gal = Engine.fuelGal();
+        bool run = Engine.running(); float gal = Engine.roadFuelGal() + Engine.raceFuelGal();
         bool refuelled = lastGal >= 0 && gal > lastGal + 1.0f;
         if ((wasRun && !run) || refuelled || (run && millis() - lastSave > 180000 && fabsf(gal - lastGal) > 0.5f)) {
-            Preferences p; p.begin("fuel", false); p.putFloat("gal", gal); p.end();
+            Preferences p; p.begin("fuel", false); p.putFloat("gal", Engine.roadFuelGal()); p.putFloat("race", Engine.raceFuelGal()); p.end();
             lastSave = millis(); lastGal = gal;
         }
         if (lastGal < 0) lastGal = gal;

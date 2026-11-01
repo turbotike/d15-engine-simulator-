@@ -597,7 +597,7 @@ const sections = [
    {key:'trailerLoad',label:'Trailer Load',min:0,max:3,step:1,desc:'What the truck is hauling. Heavier loads pull slower, lug harder and rev higher through the gears.'},
    {key:'fullStopTime',label:'Full Stop Time',min:0,max:3,step:0.1,unit:' s',desc:'How many seconds FULL brakes take to stop the truck from the speed it was doing. 0 = instant stop. Lighter braking adds up to 2 s so a dab is never a slam. The clutch goes in below 10 mph so the engine drops to idle.'},
    {key:'throttleExpo',label:'Throttle Expo',min:0,max:100,step:5,unit:'%',desc:'Softens the low end of a spring-center trigger so light pulls give fine throttle control (and it will not rev away). 0 = linear, 100 = full cubic.'},
-   {key:'fuelScale',label:'Fuel Burn Rate',min:1,max:50,step:1,unit:'x',desc:'How fast the tanks drain, times real time. 1x is real: a 120 gal tank lasts hours. At 10x a stock truck flat out empties it in about half an hour, big plungers in about six minutes. Run it dry and it sputters and dies - hit REFUEL.'}
+   {key:'revSpeed',label:'Reverse Top Speed',min:10,max:100,step:5,unit:'%',desc:'How fast it backs up at full stick. Lower it for slow, careful reversing under a trailer.'}
  ,
  ], toggles:[
    

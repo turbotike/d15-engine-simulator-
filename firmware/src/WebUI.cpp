@@ -169,7 +169,7 @@ static const int NKNOB = sizeof(KNOBS) / sizeof(KNOBS[0]);
 // and its magic carries the row COUNT, so rows appended later load as their
 // defaults instead of reading whatever bytes follow - no reset needed when the
 // table grows. APPEND ONLY. Room for 49 rows.
-static float g_retiredKnob[3] = {0, 0, 0};   // placeholders for removed settings
+static float g_retiredKnob[4] = {0, 0, 0, 0};   // placeholders for removed settings
 static Knob KNOBS2[] = {
     { "trailerSync",        &Cfg.trailerSync,  0.0f,    1.0f, 1.0f },
     { "trailerAir",         &Cfg.trailerAir,   0.0f,    1.0f, 1.0f },
@@ -202,7 +202,8 @@ static Knob KNOBS2[] = {
     { "hydSwitch",          &Cfg.hydSwitch,    0.0f,   17.0f, 1.0f },
     { "volHydPump",         &EngAudio.hydLevel, 0.0f,   2.0f, 1.0f },
     { "fullStopTime",       &Cfg.fullStopTime, 0.0f,    3.0f, 1.0f },
-    { "fuelScale",          &Engine.fuelScale, 1.0f,   50.0f, 1.0f },   // appended 2026-10-31: fuel burn rate x real time
+    { "_retired3",          &g_retiredKnob[3], -1e6f,  1e6f,  1.0f },   // was a duplicate fuelScale (KNOBS already has it)
+    { "revSpeed",           &Cfg.revSpeed,     10.0f, 100.0f, 1.0f },   // appended 2026-11-01: reverse top speed, % of the ESC's reverse range
 };
 static const int NKNOB2 = sizeof(KNOBS2) / sizeof(KNOBS2[0]);
 static const int WEB2_EE_ADDR = 300;

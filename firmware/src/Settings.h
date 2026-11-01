@@ -50,6 +50,7 @@ struct Settings {
     float hydSrv[4]    = { 0, 0, 0, 0 };             // output header per function: 0 none, 1..8 = CH1..CH8
     float hydIn[4]     = { 1, 2, 0, 0 };             // stick: 0 none, 1 throttle, 2 steering, 3.. = RX CH1..CH16
     float hydInv[4]    = { 0, 0, 0, 0 };             // reverse a function
+    float revSpeed     = 50.0f;                      // %: reverse top speed (of the ESC's reverse range)
     float fullStopTime = 1.5f;                       // s: full brakes stop the truck this fast (0 = instant, max 3)
     float hydSwitch    = 0.0f;                       // 0 = WORK MODE button only, 1..16 = RX channel high = work, 17 = always engaged
     float steerSignalThreshold = 150.0f;   // us either side of centre

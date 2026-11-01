@@ -85,7 +85,7 @@ no laptop needed after the first flash.
   while the jake is on, and you get neutral and reverse with a backup beeper.
 - **Clutch** with torque coupling and heat fade.
 - **Weight that matters.** Trailer load setting from bobtail to heavy haul, and
-  aero and rolling drag. *Full Stop Time* sets how hard full brakes stop it.
+  aero and rolling drag. *Full Stop Time* sets how hard full brakes stop it. *Reverse Top Speed* sets how fast it backs up.
 - **Air system.** Compressor, air dryer purge, brake application hiss, park brake
   set and release, spring brakes that hold the truck until the air is up, and a
   low-air buzzer.
@@ -397,7 +397,7 @@ whether it lives. **Big-plunger injectors** bring the lope and the limiter pops.
 
 **Bigger injectors drink.** The tank drains by what the injectors actually
 spray, rich or not: about 1.7 / 2.6 / 3.6 gal/h at idle and 26 / 66 / 132 gal/h
-flat out on 57s / 59s / big plungers, times the Fuel Burn Rate. See
+flat out on 57s / 59s / big plungers, in real time. See
 [Fuel and the battery](#fuel-and-the-battery).
 
 ### The tune
@@ -656,11 +656,13 @@ Set it up under WORK → Wireless Trailer & Buttons.
 ### The diesel tank
 - The **fuel gauge is the truck's own 120-gallon tank**. It drains by the fuel the
   injectors actually spray, rich or not, so bigger injectors and harder driving burn more.
-- **Fuel Burn Rate** (TUNE → Simulated Engine & Load) speeds that up: 1× is real
-  time, where a tank lasts hours. The default is 10×, so a stock truck flat out
-  empties it in about half an hour and big plungers in about six minutes.
+- It burns in **real time**, straight from the simulation: a full tank lasts a stock
+  truck about 4½ hours flat out, and big plungers under an hour.
 - Under about **2 gallons** it starts sucking air and sputtering. **Empty and it dies**,
   and it won't restart until you hit **⛽ REFUEL** (Remote Buttons on the WORK tab).
+- **Race mode runs off a 10-gallon race cell**, like a real puller, and the gauge
+  shows the cell. A 3000 hp pull drinks about half a gallon, roughly 5% of the gauge
+  per pass. REFUEL fills the road tanks and the cell.
 - The tank level is **saved**: it's where you left it after a power cycle.
 - **Low fuel** lamp at 1/8 tank.
 
