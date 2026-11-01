@@ -333,7 +333,7 @@ static void hStatus() {
         "\"tr\":%d,\"lope\":%d,\"beacon\":%d,"
         "\"hydOn\":%d,\"hydPsi\":%.0f,\"hydTemp\":%.0f,\"hydPos\":[%.0f,%.0f,%.0f,%.0f],"
         "\"rx\":[%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u],"
-        "\"dyno\":\"%s\",\"dyon\":%d,\"dyp\":%.3f,\"dyhp\":%.0f,\"gok\":%d,\"gp\":%.1f,\"gr\":%.1f,\"gt\":%.1f,\"gov\":%d,\"gax\":%d,\"ghl\":%.2f,\"gl\":%.2f,\"gf\":%.2f,\"son\":%d,\"sr\":%.2f,\"sp\":%.2f,\"sul\":%d,\"sur\":%d,\"sct\":%d,\"scr\":%d,\"stv\":%.0f}",
+        "\"dyno\":\"%s\",\"dyon\":%d,\"dyp\":%.3f,\"dyhp\":%.0f,\"gok\":%d,\"gp\":%.1f,\"gr\":%.1f,\"gt\":%.1f,\"gov\":%d,\"gax\":%d,\"ghl\":%.2f,\"gl\":%.2f,\"gf\":%.2f,\"son\":%d,\"sr\":%.2f,\"sp\":%.2f,\"sul\":%d,\"sur\":%d,\"sct\":%d,\"scr\":%d,\"stv\":%.0f,\"scl\":%.2f,\"scr2\":%.2f}",
         engine, (int)Engine.gear(), 1470 + (int)(Engine.load() * 500), (int)Out.escMicros(),
         lightMode, (unsigned long)millis(), Engine.rpm(), Engine.speedMph(), Engine.boostPsi(),
         Engine.airPsi(), Engine.airSecPsi(), Engine.coolantF(), Engine.oilF(), Engine.oilPsi(), Engine.pyroF(),
@@ -354,7 +354,7 @@ static void hStatus() {
         Engine.dynoLive() ? 1 : 0, Engine.dynoProgress(), Engine.dynoHpNow(),
         Tilt.present() ? 1 : 0, Tilt.pitchDeg(), Tilt.rollDeg(), Tilt.tiltDeg(), Tilt.rolledOver() ? 1 : 0,
         (int)Tilt.axis, Tilt.hill, Tilt.accLat(), Tilt.accFwd(),
-        Susp.P.on ? 1 : 0, Susp.rollNow(), Susp.pitchNow(), Susp.usL(), Susp.usR(), Susp.P.ctrL, Susp.P.ctrR, Susp.P.travel);
+        Susp.P.on ? 1 : 0, Susp.rollNow(), Susp.pitchNow(), Susp.usL(), Susp.usR(), Susp.P.ctrL, Susp.P.ctrR, Susp.P.travel, Susp.cornerL(), Susp.cornerR());
     http.send(200, "application/json", js);
 }
 

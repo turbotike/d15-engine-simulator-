@@ -381,7 +381,7 @@ input[type=range]::-moz-range-thumb{width:30px;height:30px;border-radius:50%;bac
    </select>
    <div class="setting-desc" style="margin-top:6px">The arrows printed on the GY-521. Check: nose the truck up a ramp and PITCH should go positive.</div>
    <div class="divider">Hill feel <span id="gyHillV" style="color:#7ee0ff">--</span></div>
-   <input type="range" id="gyHill" min="0" max="1" step="0.05" style="width:100%" oninput="document.getElementById('gyHillV').textContent=Math.round(this.value*100)+'%'" onchange="q('/cmd?action=TILT_HILL:'+this.value)">
+   <div class="slwrap"><input type="range" id="gyHill" min="0" max="1" step="0.05" oninput="document.getElementById('gyHillV').textContent=Math.round(this.value*100)+'%';paintRange(this);var v=this.value;clearTimeout(window._ghT);window._ghT=setTimeout(function(){q('/cmd?action=TILT_HILL:'+v).catch(function(){});},150)"></div>
    <div class="setting-desc" style="margin-top:6px">100% = the real grade. RC ramps are far steeper than roads, so 50% feels right. On a climb the box holds a lower gear; going down off the throttle it holds its gear instead of shifting up. Past 55&deg; for half a second the throttle cuts until it is back on its wheels.</div>
   </div>
  </div>
@@ -1215,17 +1215,29 @@ var SU_K=[['ctrL','Left ride height',1100,1900,5,' us'],['ctrR','Right ride heig
 var _suBuilt=0;
 function suBuild(){ if(_suBuilt)return; _suBuilt=1;
  ['suChL','suChR'].forEach(function(id){var s=document.getElementById(id);for(var i=0;i<8;i++){var o=document.createElement('option');o.value=i;o.textContent='CH'+(i+1);s.appendChild(o);}});
- var h='';SU_K.forEach(function(k){h+='<div style="margin-top:8px"><div style="display:flex;justify-content:space-between;font-size:.85rem"><span>'+k[1]+'</span><span id="suV_'+k[0]+'" style="color:#7ee0ff"></span></div>'+
-  '<input type="range" id="suK_'+k[0]+'" min="'+k[2]+'" max="'+k[3]+'" step="'+k[4]+'" style="width:100%" oninput="document.getElementById(\'suV_'+k[0]+'\').textContent=this.value+\''+k[5]+'\'" onchange="suSet(\''+k[0]+'\',this.value)"></div>';});
+ // Built like every other slider on the page. The page's touch-drag handler only
+ // fires oninput - these used to send on onchange, which never fired, so a drag
+ // moved the slider and the truck never heard it (Mat: "sliders don't work").
+ var h='';SU_K.forEach(function(k){h+='<div class="setting"><div class="setting-row"><span class="setting-label">'+k[1]+'</span><span class="setting-value" id="suV_'+k[0]+'"></span></div>'+
+  '<div class="slwrap"><button class="stp" onclick="suStep(\''+k[0]+'\',-1)">&#x25C2;</button>'+
+  '<input type="range" id="suK_'+k[0]+'" min="'+k[2]+'" max="'+k[3]+'" step="'+k[4]+'" oninput="suIn(\''+k[0]+'\',this.value)">'+
+  '<button class="stp" onclick="suStep(\''+k[0]+'\',1)">&#x25B8;</button></div></div>';});
  document.getElementById('suKnobs').innerHTML=h;}
 function suPaint(d){ suBuild();
  document.getElementById('suOn').checked=!!d.on; document.getElementById('suChL').value=d.chL; document.getElementById('suChR').value=d.chR;
  document.getElementById('suInvL').checked=!!d.invL; document.getElementById('suInvR').checked=!!d.invR;
- SU_K.forEach(function(k){var e=document.getElementById('suK_'+k[0]);e.value=d[k[0]];document.getElementById('suV_'+k[0]).textContent=d[k[0]]+k[5];});
+ if(!d._noKnobs)SU_K.forEach(function(k){var e=document.getElementById('suK_'+k[0]);e.value=d[k[0]];paintRange(e);document.getElementById('suV_'+k[0]).textContent=d[k[0]]+k[5];});
  var b=document.getElementById('suBadge'); b.textContent=d.on?(d.why?'BLOCKED':(d.gyro?'GYRO':'SIM')):'OFF';
  document.getElementById('suWhy').textContent=d.on&&d.why?('Not driving the servos: '+(d.why==='max 7 servos'?'too many servo outputs on':(d.why==='header in use'?'another feature has that header':'that header is read as '+d.why+' - remap it in RC CHANNEL MAP or use iBUS/SBUS'))):'';}
 function suLoad(){ q('/cmd?action=SUSP').then(function(r){return r.json();}).then(suPaint).catch(function(){}); }
-function suSet(k,v){ q('/cmd?action=SUSP_SET:'+k+':'+v).then(function(r){return r.json();}).then(suPaint).catch(function(){}); }
+function suSet(k,v,keep){ q('/cmd?action=SUSP_SET:'+k+':'+v).then(function(r){return r.json();}).then(function(d){if(keep)d._noKnobs=1;suPaint(d);}).catch(function(){toast('No answer from the truck');}); }
+var _suT={};
+function suIn(k,v){var u='';SU_K.forEach(function(x){if(x[0]===k)u=x[5];});
+ document.getElementById('suV_'+k).textContent=v+u;paintRange(document.getElementById('suK_'+k));
+ if(_suT[k])clearTimeout(_suT[k]);_suT[k]=setTimeout(function(){suSet(k,v,1);},150);}   // live while you drag; the reply doesn't snap the slider back
+function suStep(k,dir){var el=document.getElementById('suK_'+k);if(!el)return;
+ var st=parseFloat(el.step)||1,v=Math.max(+el.min,Math.min(+el.max,(parseFloat(el.value)||0)+dir*st));
+ var dec=(String(st).split('.')[1]||'').length;el.value=(Math.round(v/st)*st).toFixed(dec);suIn(k,el.value);}
 function suTest(n){ q('/cmd?action=SUSP_TEST:'+n).catch(function(){}); }
 // ---- ACTIVE SUSPENSION GAUGES: roll (rear view), pitch (side view), g-meter, servo bars ----
 var _suTrail=[];
@@ -1272,7 +1284,9 @@ function suGauges(d){
    var top=30,bot=g.h-22,mid=(top+bot)/2,bx=s[3]-9;
    x.fillStyle='#1b1f26';x.fillRect(bx,top,18,bot-top);
    x.fillStyle='#5a6270';x.fillRect(bx-4,mid-1,26,2);
-   if(+s[0]>0){var off=(+s[0]-(+s[1]))/tv,yy=mid-Math.max(-1,Math.min(1,off))*(bot-top)/2;
+   // the CORNER, not the raw servo signal: with one servo reversed the raw
+   // values moved the same way for a twist and it looked like no twist (Mat)
+   if(+s[0]>0){var off=(s[2]==='L'?+d.scl:+d.scr2),yy=mid-Math.max(-1,Math.min(1,off))*(bot-top)/2;
     x.fillStyle=Math.abs(off)>0.95?'#ff6a6a':'#7ee0ff';x.fillRect(bx,Math.min(mid,yy),18,Math.abs(yy-mid)||2);}
    x.fillStyle='#8a8578';x.font='700 11px sans-serif';x.textAlign='center';x.fillText(s[2]+(+s[0]>0?' '+s[0]:''),s[3],g.h-6);});
   suLabel(x,g.w,'SERVOS',d.son?(+d.sul>0?'LIVE':'BLOCKED'):'OFF',d.son&&+d.sul>0?'#7ee0ff':'#8a8578');}
@@ -1286,7 +1300,7 @@ function gyPaint(d){
  document.getElementById('gyP').textContent=(d.gp>0?'+':'')+(+d.gp).toFixed(1)+'\u00b0';
  document.getElementById('gyR').textContent=(d.gr>0?'+':'')+(+d.gr).toFixed(1)+'\u00b0';
  document.getElementById('gyT').textContent=(+d.gt).toFixed(1)+'\u00b0';
- if(!_gyInit){_gyInit=1;document.getElementById('gyAxis').value=d.gax;var h=document.getElementById('gyHill');h.value=d.ghl;
+ if(!_gyInit){_gyInit=1;document.getElementById('gyAxis').value=d.gax;var h=document.getElementById('gyHill');h.value=d.ghl;paintRange(h);
   document.getElementById('gyHillV').textContent=Math.round(d.ghl*100)+'%';}}
 function q(u,o){var p=_fq.then(function(){return _to(fetch(u,o),u.indexOf('/status')===0?3000:8000);});_fq=p.then(function(){},function(){});return p;}
 function updateDashboard(){if(window._dashBusy)return;window._dashBusy=1;q('/status').then(function(r){return r.json();}).then(function(d){window._dashBusy=0;

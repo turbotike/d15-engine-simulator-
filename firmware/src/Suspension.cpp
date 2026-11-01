@@ -43,6 +43,9 @@ void SuspensionClass::update(float dt, float steer, float mph, float simAccG, fl
         fwd = simAccG;
     }
     lat = clampf_s(lat, -1.0f, 1.0f); fwd = clampf_s(fwd, -1.0f, 1.0f);
+    // Under power it TWISTS, it barely squats (Mat: "it needs to only really
+    // twist"): pulling away is a quarter of the dive you get stopping.
+    if (fwd > 0.0f) fwd *= 0.25f;
     // torque twist, as g-equivalent roll so it rides the same spring + damper
     lat += P.twist / fmaxf(P.roll, 50.0f) * clampf_s(engTq01, 0.0f, 3.0f);
 
@@ -69,6 +72,7 @@ void SuspensionClass::update(float dt, float steer, float mph, float simAccG, fl
     float pitchUs = _p * P.pitch;
     float dL = clampf_s(-rollUs + pitchUs, -P.travel, P.travel);
     float dR = clampf_s( rollUs + pitchUs, -P.travel, P.travel);
+    _cornerL = dL / fmaxf(P.travel, 1.0f); _cornerR = dR / fmaxf(P.travel, 1.0f);   // for the gauge: + = corner UP
     if (P.invL) dL = -dL;
     if (P.invR) dR = -dR;
     int usL = (int)clampf_s(P.ctrL + dL, 900, 2100);

@@ -53,6 +53,7 @@ static uint8_t g_webJake  = 0;         // JAKE_CYCLE: 0 off, 1 LO, 2 HI
 static bool  g_workBtn = false;        // WORK MODE button latch (cleared on leaving PARK)
 static bool  g_hydDrive = false;       // work mode is using the throttle/steering sticks (last loop)
 static float g_benchStick = 0.5f;      // bench: last 0-9 key, stands in for the Fn 1 stick in work mode
+static bool g_benchPark = false;        // bench '~park=1': the park brake without an RC gear channel
 static uint32_t g_crankTraceUntil = 0;  // bench Q: start the engine and log the start sequence audio
 static uint32_t g_rpmTraceUntil = 0;   // bench R: 20 Hz rpm trace (rev-feel tuning)
 static bool  sdOk = false;
@@ -222,6 +223,7 @@ static void benchKeys() {
                 }
                 // GY-521: tilt=1 status, tiltlevel=1 (parked flat), tiltaxis=0..3 (+X -X +Y -Y = front), hill=0..1
                 if (!strcmp(tok, "wg"))        { Engine.boostMax = constrain((float)atof(eq + 1), 15.0f, 120.0f); continue; }   // wastegate (bench)
+                if (!strcmp(tok, "park"))      { g_benchPark = atoi(eq + 1) != 0; continue; }   // bench: park brake on/off
                 if (!strcmp(tok, "fuelgal"))   { Engine.setFuelGal((float)atof(eq + 1)); continue; }   // bench: set the tank
                 if (!strcmp(tok, "danger"))    { if (atoi(eq + 1)) EngAudio.playDanger(); else EngAudio.stopDanger(); continue; }
                 if (!strcmp(tok, "tilt"))      { Tilt.print(); continue; }
@@ -674,6 +676,7 @@ void loop() {
         jakeAmt = 0.0f; bHorn = false;
     } else {
         benchKeys();                           // never had a receiver: bench use
+        Engine.setParkBrake(g_benchPark);
     }
 
     // engine on/off edge

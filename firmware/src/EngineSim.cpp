@@ -603,7 +603,10 @@ void EngineSim::stepCoupled(float dt, float throttle, float jakeAmt, float brake
     // HARD STOP: declutch while the engine is still ABOVE idle. Waiting for
     // wt to fall under idle meant every hard stop dragged the engine to
     // ~660 first and you heard it sag before it recovered.
-    if (throttle < 0.1f && (wt < IDLE_RPM - 20.0f || (brake01 > 0.5f && wt < IDLE_RPM + 220.0f))) {
+    // ...and on ANY brake, not only a hard one, and just above idle when coasting:
+    // a light-brake stop still dragged the engine under idle first (Mat: "when I
+    // come to a full stop it bogs the motor a bit then comes back").
+    if (throttle < 0.1f && (wt < IDLE_RPM + 60.0f || (brake01 > 0.05f && wt < IDLE_RPM + 220.0f))) {
         grab = 0.0f;
         s_clutchLocked = false;
     }
@@ -1145,6 +1148,11 @@ void EngineSim::update(float dt, float throttle01, bool inDrive, bool inReverse,
         g_jakePedal += (want - g_jakePedal) * min(1.0f, dt / 0.40f);
         if (g_jakePedal > brake01) brake01 = g_jakePedal;
     } else {
+        // Your foot goes to the THROTTLE: the auto-brake is gone at once. It used
+        // to ease off over ~0.5 s, and any brake holds the truck through Full
+        // Stop Time - so it sat for a beat before it would pull away (Mat: "when
+        // I come to a stop it doesn't want to start moving right away").
+        if (g_throttle >= 0.1f) g_jakePedal = 0;
         g_jakePedal -= dt / 0.55f;                   // off the pedal, slower
         if (g_jakePedal < 0) g_jakePedal = 0;
         if (g_jakePedal > brake01) brake01 = g_jakePedal;
@@ -1164,6 +1172,11 @@ void EngineSim::update(float dt, float throttle01, bool inDrive, bool inReverse,
     // Releasing the PARK brake has its own sound (pbrakeoff); a service
     // application still pending at that moment must not hiss on top of it.
     { static bool s_prevPark = false; if (s_prevPark && !g_parkBrake) s_peakApplied = 0; s_prevPark = g_parkBrake; }
+    // ...and while it is SET there is no service-brake release hiss at all: you
+    // stop on the brake stick, set park, let the stick go - that let-go hissed
+    // right after pbrakeon (Mat: "setting the park brake triggers the air brake
+    // sound"). The spring brakes hold the truck; letting the pedal up is silent.
+    if (g_parkBrake) s_peakApplied = 0;
     if (brake01 >= 0.05f && g_brakeApplied > s_peakApplied) s_peakApplied = g_brakeApplied;
     if (brake01 < 0.05f && s_peakApplied > 4) { g_hissEvent = clampf(s_peakApplied/BRAKE_MAX_PSI,0.12f,1); s_peakApplied = 0; }
     g_lowAir = g_airPsi < LOW_AIR;
@@ -1720,6 +1733,27 @@ g_gear = tgt; g_manReq = g_gear; shiftTo = 0; shifting = false;
         // gears it had already taken. On a drag strip you go UP the box and
         // only up. It stays live outside race mode, where coasting and the
         // jake both need it.
+        // RACE MODE COMES BACK DOWN THE LADDER - off the throttle only, so a run
+        // (always on the throttle) can never walk back down (Mat: "it should
+        // downshift in race mode so I don't have to keep entering and exiting").
+        // Next rung down, once it would land at or under 1750 rpm (well under
+        // the 2080 race upshift point, so it cannot hunt).
+        else if (g_raceMode && g_throttle < 0.1f && g_gear > g_raceLaunch) {
+            int prev = g_raceLaunch;
+            if (g_raceSkip  && g_raceSkip  < g_gear && g_raceSkip  > prev) prev = g_raceSkip;
+            if (g_raceSkip2 && g_raceSkip2 < g_gear && g_raceSkip2 > prev) prev = g_raceSkip2;
+            if (g_raceTop   && g_raceTop   < g_gear && g_raceTop   > prev) prev = g_raceTop;
+            if (g_speed * rpmPerMph[prev - 1] <= 1750.0f) {
+                shiftTo = prev; shifting = true;
+                shiftTimer = (SHIFT_TIME_MIN * 0.80f) + frand01() * (SHIFT_TIME_MAX - SHIFT_TIME_MIN) * 0.75f;
+                float blip = fabsf(g_speed * rpmPerMph[prev - 1] - rpm);
+                neutralTimer = NEUTRAL_MIN + NEUTRAL_PER_K * (blip / 1000.0f);
+                if (neutralTimer > NEUTRAL_MAX) neutralTimer = NEUTRAL_MAX;
+                neutralTimer += LEVER_TIME;
+                g_fuelHold = g_fuelDeliv;
+                rollDriver();
+            }
+        }
         else if (!g_raceMode && wr < dnPoint && g_gear > dnFloor) {
             shiftTo = g_gear-1; shifting = true;
             // A downshift on the brake is a deliberate, brisker move than an

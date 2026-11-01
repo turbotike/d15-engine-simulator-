@@ -108,9 +108,9 @@ struct LopeParams {
     float life   = 0.5f;   // chance a step is swapped (on top of the random walk)
     float eng    = 1.5f;   // engine layer level while loping
     float exh    = 1.5f;   // exhaust layer level while loping
-    float limCut = 0.5f;   // limiter: chance a pulse is cut
-    float limPop = 3.0f;   // limiter: a pulse that fires comes in this fat
-    float limBass= 2.0f;   // limiter: bass on the pops
+    float limCut = 0.55f;  // limiter: chance a pulse is cut (more gaps = more pops between)
+    float limPop = 4.5f;   // limiter: a pulse that fires comes in this fat (was 3 - "not popping enough")
+    float limBass= 3.0f;   // limiter: bass on the pops (was 2)
     float body   = 0.4f;   // the WHOLE engine sound follows the rhythm: up this much on a CHUG cycle
     float bodyMs = 120.0f; // ...and settles back over this
     char  pattern[17] = "BmBmBmmssBmss";  // the feel: B CHUG, s chu, x miss, m normal

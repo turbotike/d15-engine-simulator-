@@ -129,7 +129,9 @@ public:
     // 0 = an instant stop. Max 3 s. See roadDrag().
     void  setStopTime(float s)        { g_stopTime = s < 0 ? 0 : s; g_stopEnabled = true; }
     void  setPtoLoad(float l01)       { g_ptoLoad = clampf(l01, 0, 1); }     // hydraulic pump drag
-    void  setParkBrake(bool on)       { if (g_parkBrake && !on) g_hissEvent = 0.9f;  g_parkBrake = on; }
+    // No hiss here: releasing the park brake plays pbrakeoff.wav (main.cpp), and this
+    // extra service-brake hiss played right after it, in street AND race (Mat).
+    void  setParkBrake(bool on)       { g_parkBrake = on; }
     bool  parkBrake() const           { return g_parkBrake; }
     void  setManualGear(int g)        { g_manReq = (int8_t)constrain(g, 1, N_GEARS); }
 

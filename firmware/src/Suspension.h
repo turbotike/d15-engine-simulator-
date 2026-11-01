@@ -53,11 +53,13 @@ public:
     float pitchNow() const { return _p; }
     int   usL() const { return _usL; }               // what the servos were last told (0 = not driving)
     int   usR() const { return _usR; }
+    float cornerL() const { return _cornerL; }        // -1..1 of travel, + = that corner goes UP (servo reverse undone)
+    float cornerR() const { return _cornerR; }
 private:
     float _r = 0, _rv = 0, _p = 0, _pv = 0;          // body roll / pitch state (g-equivalent) + velocity
     int   _test = 0; uint32_t _testUntil = 0;
     const char* _why = "";
-    float _lastMph = 0; int _usL = 0, _usR = 0;
+    float _lastMph = 0; int _usL = 0, _usR = 0; float _cornerL = 0, _cornerR = 0;
 };
 
 extern SuspensionClass Susp;
