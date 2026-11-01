@@ -479,7 +479,7 @@ void EngineSim::start() {
     if (g_starve >= 1.0f) return;                                 // battery cut off: fresh pack first
     if (g_state == ES_OFF) { g_state = ES_CRANK; crankT = 0; g_trigStart = true;
         g_shutMute = 1.0f;                     // undo any previous shutdown mute
-        if (fuelGal() <= 0.05f) { g_state = ES_OFF; return; }     // dry tank (road or race cell): no start
+        if (g_fuelGal <= 0.05f) { g_state = ES_OFF; return; }     // dry tanks: no start
         crankDur = 1.0f + coldFactor()*3.0f;                      // warm 1s .. dead cold 4s
         if (g_airPsi < AIR_START) g_airPsi = AIR_START;
         g_brakeApplied = 0; s_peakApplied = 0; g_compLoaded = true; }
@@ -1033,8 +1033,7 @@ void EngineSim::update(float dt, float throttle01, bool inDrive, bool inReverse,
           // gaps, more and longer as starve rises - a diesel sucking air as it
           // runs dry, not a clean switch-off.
           // the tank running dry sucks air the same way: from ~2 gal down
-          float lowAt = g_raceMode ? 0.5f : 2.0f;                  // the cell sucks air later - it's small
-          float starveNow = fmaxf(g_starve, clampf((lowAt - fuelGal()) / lowAt, 0, 1));
+          float starveNow = fmaxf(g_starve, clampf((2.0f - g_fuelGal) / 2.0f, 0, 1));
           if (starveNow > 0.0f && running) {
               static uint32_t s_gapEnd = 0, s_nextGap = 0;
               uint32_t ms = millis();
@@ -1166,9 +1165,8 @@ void EngineSim::update(float dt, float throttle01, bool inDrive, bool inReverse,
         // +0.7 gal/h on 59s, +1.8 on big plungers.
         gph += 0.45f * (PT_FFLOW[parts.fuel > 2 ? 2 : parts.fuel] - 1.0f);
         g_gph = gph;
-        float &tank = g_raceMode ? g_raceFuelGal : g_fuelGal;   // race mode drinks from the race cell
-        tank -= gph * dt / 3600.0f;                      // REAL TIME, straight from the sim - no burn-rate multiplier (Mat)
-        if (tank <= 0) { tank = 0; stop(); }             // ran it dry: REFUEL to restart
+        g_fuelGal -= gph * dt / 3600.0f;                 // REAL TIME, straight from the sim - no burn-rate multiplier (Mat)
+        if (g_fuelGal <= 0) { g_fuelGal = 0; stop(); }   // ran the tanks dry: REFUEL to restart
         // The BATTERY cut-off no longer empties the tank (the fuel gauge is the
         // real tank now - Mat: "I want a real fuel gauge and you have to refuel
         // it"), so a finished starve stops the engine itself.

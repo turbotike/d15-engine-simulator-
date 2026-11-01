@@ -44,9 +44,9 @@ public:
     float    pyroF()      const { return g_pyroF; }
     float    transF()     const { return g_transF; }
     float    volts()      const { return g_volts; }
-    float    fuelGal()    const { return g_raceMode ? g_raceFuelGal : g_fuelGal; }   // the tank feeding the engine
+    float    fuelGal()    const { return g_fuelGal; }
     float    fuelGph()    const { return g_gph; }
-    float    fuelFrac()   const { return g_raceMode ? g_raceFuelGal / RACE_CELL_GAL : g_fuelGal / tankGal; }
+    float    fuelFrac()   const { return g_fuelGal / tankGal; }
     float    health()     const { return g_health; }
 
     // ---- TUNING: fuel & timing maps (8 rpm bands, 600-2100) ----
@@ -309,15 +309,8 @@ public:
     float turboSpool()  const { return clampf(g_tShaft / 102000.0f, 0, 1); }
     float wastegate01() const { return g_tWg; }
 
-    void  refuel()            { g_fuelGal = tankGal; g_raceFuelGal = RACE_CELL_GAL; }   // fills the road tanks AND the race cell
+    void  refuel()            { g_fuelGal = tankGal; }
     void  setFuelGal(float g)  { g_fuelGal = clampf(g, 0, tankGal); }
-    // RACE FUEL CELL (Mat: "in race mode doing pulls at 3000 hp it should be drinking
-    // fuel"). A pull burns ~0.5 gal for real - invisible on 120 gal of road tanks,
-    // so race mode runs off a small cell like a real puller: ~5% a pass.
-    static constexpr float RACE_CELL_GAL = 10.0f;
-    float roadFuelGal() const   { return g_fuelGal; }
-    float raceFuelGal() const   { return g_raceFuelGal; }
-    void  setRaceFuelGal(float g) { g_raceFuelGal = clampf(g, 0, RACE_CELL_GAL); }
     // Battery = fuel (Battery.cpp). The real pack's state of charge drives the tank,
     // and starve (0..1) cuts fuel in random bursts - the engine sputters, then dies.
     void  setFuelFrac(float f) { g_fuelGal = clampf(f, 0, 1) * tankGal; }
@@ -732,8 +725,7 @@ static const float RAD;
     float s_airSaved = -999.0f;             // last pressure written to NVS
     // fuel / temps / electrics (CAT C15 6NZ realism pass)
     float g_gph=0;                          // live fuel burn, gal/h
-    float g_fuelGal=120.0f;                 // road tanks; starts full; persisted in NVS "fuel" (main.cpp)
-    float g_raceFuelGal=10.0f;              // race fuel cell (race mode); persisted too
+    float g_fuelGal=120.0f;                 // starts full; persisted in NVS "fuel" (main.cpp)
     float g_pyroF=AMBIENT_F;                // EGT pre-turbo
     float g_transF=AMBIENT_F;               // transmission temp
     float g_oilPsi=0, g_volts=12.5f;

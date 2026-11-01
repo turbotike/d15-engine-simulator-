@@ -660,9 +660,6 @@ Set it up under WORK → Wireless Trailer & Buttons.
   truck about 4½ hours flat out, and big plungers under an hour.
 - Under about **2 gallons** it starts sucking air and sputtering. **Empty and it dies**,
   and it won't restart until you hit **⛽ REFUEL** (Remote Buttons on the WORK tab).
-- **Race mode runs off a 10-gallon race cell**, like a real puller, and the gauge
-  shows the cell. A 3000 hp pull drinks about half a gallon, roughly 5% of the gauge
-  per pass. REFUEL fills the road tanks and the cell.
 - The tank level is **saved**: it's where you left it after a power cycle.
 - **Low fuel** lamp at 1/8 tank.
 
