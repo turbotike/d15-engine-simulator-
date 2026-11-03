@@ -78,18 +78,18 @@ body{padding-bottom:74px}
 #tabbar button{flex:1;background:none;border:none;color:var(--dim);font:700 .58rem/1.1 inherit;letter-spacing:.5px;
  padding:7px 0 5px;border-radius:10px;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer}
 .ctlnote{font-size:.74rem;color:var(--dim);margin-bottom:10px;line-height:1.4}
-.ctlrow{display:grid;grid-template-columns:62px 1fr;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--border)}
-.ctlhd{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
-.ctlch{font:800 1.15rem/1 Impact,'Arial Narrow Bold','Arial Black',sans-serif;letter-spacing:1px;color:#fff}
+.ctlrow{padding:10px 0;border-top:1px solid var(--border)}
+.ctlmid{display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0}
+.ctlch{font:800 1.5rem/1 Impact,'Arial Narrow Bold','Arial Black',sans-serif;letter-spacing:1px;color:#fff}
 .ctlsw{font:800 .6rem/1 inherit;letter-spacing:1px;padding:5px 8px;border-radius:999px;border:1px solid var(--border);background:#120c1d;color:var(--dim);cursor:pointer}
 .ctlsw.on{background:var(--green);border-color:var(--green);color:#000}
 .ctlsw.lock{opacity:.55;cursor:not-allowed}
-.ctlpad{display:grid;grid-template-columns:76px 1fr 76px;gap:8px;align-items:center}
-.ctlarr{height:68px;border-radius:14px;border:1px solid var(--border);background:#1a1326;color:#fff;font-size:2rem;line-height:1;cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none}
+.ctlpad{display:grid;grid-template-columns:minmax(0,1fr) minmax(96px,1.1fr) minmax(0,1fr);gap:8px;align-items:center}
+.ctlarr{height:104px;border-radius:16px;border:1px solid var(--border);background:#1a1326;color:#fff;font-size:3.4rem;line-height:1;cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none}
 .ctlarr:active{background:#2a1f3d;transform:scale(.96)}
 .ctlarr:disabled{opacity:.25;cursor:not-allowed;transform:none}
-.ctlval{text-align:center;font-variant-numeric:tabular-nums;cursor:pointer}
-.ctlval b{display:block;font-size:1.5rem;color:#fff}
+.ctlval{text-align:center;font-variant-numeric:tabular-nums;cursor:pointer;width:100%}
+.ctlval b{display:block;font-size:1.25rem;color:#fff}
 .ctlval span{font-size:.68rem;color:var(--dim);letter-spacing:.5px}
 .ctlbar{height:6px;border-radius:99px;background:#1a1326;margin-top:6px;position:relative;overflow:hidden}
 .ctlbar i{position:absolute;top:0;bottom:0;width:6px;margin-left:-3px;border-radius:99px;background:var(--cyan)}
@@ -753,11 +753,13 @@ function ctlMove(n,us){us=Math.max(1000,Math.min(2000,Math.round(us)));CTL.ch[n-
  if(CTL.busy[n])CTL.want[n]=us;else ctlSend(n,'&us='+us);}
 function ctlBuild(){if(CTL.built)return;CTL.built=true;var h='';
  for(var n=1;n<=8;n++){
-  h+='<div class="ctlrow"><div class="ctlhd"><span class="ctlch">CH'+n+'</span>'+
-   '<button class="ctlsw" id="csw'+n+'" onclick="ctlToggle('+n+')">OFF</button></div>'+
-   '<div class="ctlpad"><button class="ctlarr" id="cl'+n+'" aria-label="CH'+n+' left">&#x25C0;</button>'+
-   '<div class="ctlval" onclick="ctlCentre('+n+')"><b id="cv'+n+'">1500</b><span id="cs'+n+'">us</span>'+
+  // Mat: "just have the CH in the centre and a big arrow on each side"
+  h+='<div class="ctlrow"><div class="ctlpad">'+
+   '<button class="ctlarr" id="cl'+n+'" aria-label="CH'+n+' left">&#x25C0;</button>'+
+   '<div class="ctlmid"><span class="ctlch">CH'+n+'</span>'+
+   '<div class="ctlval" onclick="ctlCentre('+n+')"><b id="cv'+n+'">1500</b><span id="cs'+n+'">0%</span>'+
    '<div class="ctlbar"><i id="cb'+n+'" style="left:50%"></i></div></div>'+
+   '<button class="ctlsw" id="csw'+n+'" onclick="ctlToggle('+n+')">OFF</button></div>'+
    '<button class="ctlarr" id="cr'+n+'" aria-label="CH'+n+' right">&#x25B6;</button></div></div>';}
  document.getElementById('ctlRows').innerHTML=h;
  for(var n2=1;n2<=8;n2++){ctlHold('cl'+n2,n2,-1);ctlHold('cr'+n2,n2,1);}}
@@ -775,7 +777,7 @@ function ctlPaint(n){var c=CTL.ch[n-1];if(!c)return;
  sw.className='ctlsw'+(c.on?' on':'')+(c.lock?' lock':'');
  document.getElementById('cl'+n).disabled=document.getElementById('cr'+n).disabled=!c.on;
  document.getElementById('cv'+n).textContent=c.us;
- document.getElementById('cs'+n).textContent=Math.round((c.us-1500)/5)+'%  us';
+ document.getElementById('cs'+n).textContent=Math.round((c.us-1500)/5)+'%';
  document.getElementById('cb'+n).style.left=((c.us-1000)/10)+'%';}
 function ctlApply(d){if(!d||!d.ch)return;CTL.rc=d.rc;
  d.ch.forEach(function(c,i){var n=i+1;if(CTL.busy[n]&&CTL.ch[i])c.us=CTL.ch[i].us;CTL.ch[i]=c;ctlPaint(n);});
